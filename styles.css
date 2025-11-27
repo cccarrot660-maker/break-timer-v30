@@ -642,3 +642,111 @@ tr:hover td {
 
 /* Larger Today number */
 #sumTodayLarge { font-size: 20px; color: white; display:inline-block; min-width:64px; }
+
+
+
+/* ===== History Action Buttons - V11 PRO Theme (Patch) ===== */
+/* Place this at the end of your existing styles.css */
+
+#logsTable tbody td { vertical-align: middle; padding: 12px 8px; }
+
+.actionCell {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 12px;
+}
+
+/* capsule buttons */
+.actionBtn {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:20px;
+  border:0;
+  cursor:pointer;
+  font-weight:600;
+  font-size:13px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+
+/* edit (teal/cyan) */
+.actionBtn.edit {
+  background: linear-gradient(90deg,#0dd1ff,#6b8cff);
+  color: #041125;
+}
+.actionBtn.edit:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(11, 202, 255, 0.14); }
+
+/* delete (pink/purple outline) */
+.actionBtn.del {
+  background: rgba(157,78,221,0.08);
+  color: #ff66a3;
+  border: 1px solid rgba(157,78,221,0.25);
+}
+.actionBtn.del:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(157,78,221,0.08); }
+
+/* icon style (small SVG or emoji) */
+.actionBtn svg { width:16px;height:16px;opacity:0.95; }
+
+/* responsive: on small width show icon-only */
+@media (max-width:720px){
+  .actionBtn { padding:8px;border-radius:10px;font-size:12px; }
+  .actionBtn span.text { display:none; } /* hide label, show icon only */
+}
+
+/* modal improvements */
+#editModal > div {
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 10px 40px rgba(2,6,23,0.6);
+}
+#editForm label { font-size:13px; color:var(--text-secondary); margin-top:8px; }
+#editForm input { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:8px; border-radius:6px; width:100%; }
+
+
+/* === NOAH345 Patch: Table header + action button colors === */
+/* Add at end: makes table headers and action buttons white and aligns last column */
+:root {
+  --header-bg: #10344a; /* adjust if you prefer a different header color */
+}
+
+/* Force white text for table headers */
+#logsTable thead th {
+  color: #ffffff !important;
+  padding: 14px 12px !important;
+  background: var(--header-bg);
+  border-bottom: 2px solid rgba(0,212,255,0.06);
+}
+
+/* Ensure action column header matches */
+#logsTable thead th:last-child {
+  text-align: center;
+  background: var(--header-bg);
+  color: #ffffff !important;
+}
+
+/* Ensure table cells align vertically */
+#logsTable tbody td { vertical-align: middle; }
+
+/* Force white text for action buttons and SVG icons */
+.actionBtn.edit,
+.actionBtn.del,
+.actionBtn.edit span,
+.actionBtn.del span,
+.actionBtn.edit svg,
+.actionBtn.del svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Small tweak: make actionCell align content to center vertically */
+.actionCell { align-items: center; }
+
+/* Optional: slightly reduce button size on very small screens */
+@media (max-width: 520px){
+  .actionBtn { padding:6px 10px; font-size:12px; border-radius:12px; }
+  #logsTable thead th { font-size:13px; }
+}

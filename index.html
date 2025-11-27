@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Break Timer V11 PRO — NOAH345</title>
+  <title>Break Timer V11 PRO — break</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -26,7 +26,7 @@
           <option value="พัก">พัก</option>
           <option value="ทำงาน">ทำงาน</option>
         </select>
-        <div class="dailyTargetWrap">เป้ารายวัน <input id="dailyTargetInput" type="number" min="0" value="60" /> นาที</div>
+        <div class="dailyTargetWrap">เวลารายวัน <input id="dailyTargetInput" type="number" min="0" value="60" /> นาที</div>
       </div>
 
       <div class="timerCard timer-display">
@@ -109,7 +109,7 @@
           <input type="date" id="filterEnd" />
           <button id="applyFilter" class="btn ghost">กรอง</button>
         </div>
-        <div class="logs"><table id="logsTable"><thead><tr><th>ประเภท</th><th>เริ่ม</th><th>จบ</th><th>นาที</th></tr></thead><tbody></tbody></table></div>
+        <div class="logs"><table id="logsTable"><thead><tr><th>ประเภท</th><th>เริ่ม</th><th>จบ</th><th>นาที</th><th>การกระทำ</th></tr></thead><tbody></tbody></table></div>
         <div class="row">
           <button id="exportCsv" class="btn ghost">Export CSV</button>
           <button id="clearAll" class="btn danger">ลบทั้งหมด</button>
@@ -126,5 +126,24 @@
   <footer class="footer small">NOAH345 💜 — V11 PRO • อัปเดต UI และเตรียมให้โฮสต์ออนไลน์ได้</footer>
 
 <script src="app.js"></script>
+
+<!-- Edit/Delete Modal (injected by assistant) -->
+<div id="editModal" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:9999;">
+ <div style="background:var(--bg-card);padding:20px;border-radius:10px;min-width:320px;color:var(--text-primary);">
+   <h3>แก้ไขรายการ</h3>
+   <form id="editForm">
+     <input type="hidden" id="editIndex">
+     <label>ประเภท <input id="editType"></label>
+     <label>เริ่ม <input id="editStart" type="datetime-local"></label>
+     <label>จบ <input id="editEnd" type="datetime-local"></label>
+     <label>หมายเหตุ <input id="editNote"></label>
+     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+       <button type="button" id="editCancel" class="btn ghost">ยกเลิก</button>
+       <button type="submit" class="btn primary">บันทึก</button>
+     </div>
+   </form>
+ </div>
+</div>
+
 </body>
 </html>

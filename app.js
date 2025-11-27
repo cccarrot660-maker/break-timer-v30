@@ -399,3 +399,122 @@ async function sendDailySummary(){
   };
 })();
 
+
+
+
+/* ===== ENHANCE HISTORY ROWS: nicer action buttons & binding ===== */
+(function(){
+  const STORAGE='bt_v11_logs';
+  const qs = s => document.querySelector(s);
+  function loadLogs(){ try{ return JSON.parse(localStorage.getItem(STORAGE)||'[]'); }catch(e){return[];} }
+  function saveLogs(v){ localStorage.setItem(STORAGE, JSON.stringify(v||[])); }
+
+  function toLocalFmt(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'; }
+  function minsBetween(s,e){ if(!s) return 0; try{ const st=new Date(s); const ed=e?new Date(e):new Date(); return Math.round((ed-st)/60000); }catch(e){return 0;} }
+
+  function renderEnhancedLogs(filterStart, filterEnd){
+    const tbody = qs('#logsTable tbody');
+    if(!tbody) return;
+    const raw = loadLogs();
+    // apply filters (same logic as original renderLogs if present)
+    const fs = filterStart ? new Date(filterStart+'T00:00:00') : null;
+    const fe = filterEnd ? new Date(filterEnd+'T23:59:59') : null;
+    tbody.innerHTML = '';
+    raw.slice().reverse().forEach((l, revIdx)=>{
+      const idx = raw.length - 1 - revIdx;
+      const mins = minsBetween(l.start, l.end);
+      if(fs && new Date(l.start) < fs) return;
+      if(fe && new Date(l.start) > fe) return;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${l.type || ''}</td>
+        <td>${toLocalFmt(l.start)}</td>
+        <td>${l.end ? toLocalFmt(l.end) : '-'}</td>
+        <td>${mins}</td>
+        <td class="actionCell">
+          <button class="actionBtn edit" data-i="${idx}" title="แก้ไข">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21v-3l11-11 3 3L6 21H3z" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="text">แก้ไข</span>
+          </button>
+          <button class="actionBtn del" data-i="${idx}" title="ลบ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6v12m8-12v12M10 6V4h4v2" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="text">ลบ</span>
+          </button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    bindEnhanced();
+  }
+
+  function bindEnhanced(){
+    document.querySelectorAll('.actionBtn.edit').forEach(b=>{
+      b.onclick = function(){
+        const i = Number(this.dataset.i);
+        openEditModal(i);
+      };
+    });
+    document.querySelectorAll('.actionBtn.del').forEach(b=>{
+      b.onclick = function(){
+        const i = Number(this.dataset.i);
+        if(!confirm('ต้องการลบรายการนี้หรือไม่?')) return;
+        const arr = loadLogs();
+        if(i<0 || i>=arr.length) return alert('Index ไม่ถูกต้อง');
+        arr.splice(i,1);
+        saveLogs(arr);
+        // call original render if exists
+        if(typeof window.renderLogs === 'function'){ try{ window.renderLogs(); }catch(e){ renderEnhancedLogs(); } } else renderEnhancedLogs();
+        if(typeof window.updateStats === 'function'){ try{ window.updateStats(); }catch(e){} }
+      };
+    });
+  }
+
+  function openEditModal(i){
+    const arr = loadLogs();
+    const d = arr[i];
+    if(!d) return alert('ไม่พบบันทึก');
+    qs('#editIndex').value = i;
+    qs('#editType').value = d.type || '';
+    qs('#editStart').value = d.start ? toInputDT(d.start) : '';
+    qs('#editEnd').value = d.end ? toInputDT(d.end) : '';
+    qs('#editNote').value = d.note || '';
+    qs('#editModal').style.display = 'flex';
+  }
+
+  function toInputDT(iso){
+    const d = new Date(iso);
+    const p = n=>String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  // wire save for modal form
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // try to enhance after initial render
+    setTimeout(()=>{ renderEnhancedLogs(); }, 350);
+
+    const form = qs('#editForm');
+    if(form){
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        const i = Number(qs('#editIndex').value);
+        const arr = loadLogs();
+        if(i<0 || i>=arr.length) return alert('Index ผิดพลาด');
+        arr[i].type = qs('#editType').value;
+        arr[i].start = qs('#editStart').value ? new Date(qs('#editStart').value).toISOString() : arr[i].start;
+        arr[i].end = qs('#editEnd').value ? new Date(qs('#editEnd').value).toISOString() : arr[i].end;
+        arr[i].note = qs('#editNote').value;
+        saveLogs(arr);
+        qs('#editModal').style.display = 'none';
+        if(typeof window.renderLogs === 'function'){ try{ window.renderLogs(); }catch(e){ renderEnhancedLogs(); } } else renderEnhancedLogs();
+        if(typeof window.updateStats === 'function'){ try{ window.updateStats(); }catch(e){} }
+      });
+    }
+
+    const cancel = qs('#editCancel');
+    if(cancel) cancel.addEventListener('click', ()=>{ qs('#editModal').style.display='none'; });
+
+    // re-run enhance when filters applied
+    const applyBtn = qs('#applyFilter');
+    if(applyBtn) applyBtn.addEventListener('click', ()=>{ renderEnhancedLogs(qs('#filterStart').value, qs('#filterEnd').value); });
+  });
+
+})();
