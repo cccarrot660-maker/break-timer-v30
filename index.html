@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Break Timer V11 PRO — NOAH345</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>NOAH345</h1>
+      <div class="subtitle">Break Timer — Neon CyberUI</div>
+    </div>
+    <nav class="nav">
+      <button id="darkToggle" class="btn ghost">โหมดมืด</button>
+      <button id="openProfile" class="btn ghost">โปรไฟล์</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="leftPanel card">
+      <div class="timerHeader">
+        <select id="modeSelect" class="select">
+          <option value="พัก">พัก</option>
+          <option value="ทำงาน">ทำงาน</option>
+        </select>
+        <div class="dailyTargetWrap">เป้ารายวัน <input id="dailyTargetInput" type="number" min="0" value="60" /> นาที</div>
+      </div>
+
+      <div class="timerCard timer-display">
+        <div id="timerLabel" class="status">สถานะ: พร้อม</div>
+        <div id="timeLarge" class="time">00:00:00</div>
+        <div id="timeInfo" class="info">ไม่มีการจับเวลา</div>
+        <div class="daily-progress">
+          <div class="daily-progress__meta">วันนี้พักไปแล้ว: <strong id="sumTodayLarge">0</strong> นาที</div>
+          <div class="progressWrap"><div id="sumTodayBar" class="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div>
+          <div class="daily-progress__target">เป้ารายวัน: <strong id="dailyTargetLabel">60</strong> นาที</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" class="btn primary large">เริ่ม</button>
+        <button id="pauseBtn" class="btn alt large">พัก/Resume</button>
+        <button id="endBtn" class="btn warn large">จบ</button>
+      </div>
+
+      <div class="settingsGrid">
+        <label>ตั้งเวลารอบ (นาที)
+          <input id="limitMinutes" type="number" min="1" value="30" />
+        </label>
+        <label>เตือนก่อน (นาที)
+          <input id="warnBefore" type="number" min="0" value="5" />
+        </label>
+        <label>เสียงแจ้งเตือน
+          <input id="soundToggle" type="checkbox" checked />
+        </label>
+      </div>
+
+      <div class="notes">
+        <button id="manualToggle" class="btn ghost">เพิ่มบันทึกแบบกำหนดเอง</button>
+        <div id="manualForm" class="manual hidden">
+          <input id="manualType" placeholder="ประเภท (เช่น พักกลางวัน)" />
+          <input id="manualStart" type="datetime-local" />
+          <input id="manualEnd" type="datetime-local" />
+          <input id="manualNote" placeholder="หมายเหตุ (ไม่บังคับ)" />
+          <div class="row">
+            <button id="manualSave" class="btn primary">บันทึก</button>
+            <button id="manualCancel" class="btn ghost">ยกเลิก</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="rightPanel">
+      <div class="card compact">
+        <h3>Analytics</h3>
+        <canvas id="chartDaily"></canvas>
+        <div class="summary small">
+วันนี้คงเหลือ: <strong id="sumRemainBarText">0</strong> นาที
+          วันนี้: <strong id="sumToday">0</strong> นาที &nbsp;|&nbsp;
+          สัปดาห์: <strong id="sumWeek">0</strong> นาที &nbsp;|&nbsp;
+          รวม: <strong id="sumAll">0</strong> นาที
+        </div>
+      </div>
+
+      <div class="card compact">
+        <h3>การแจ้งเตือน & Telegram</h3>
+        <label>Bot Token: <input id="tgToken" placeholder="123456:ABC" /></label>
+        <label>Chat ID: <input id="tgChatId" placeholder="987654321" /></label>
+        <label>Proxy URL (optional): <input id="proxyUrl" placeholder="https://your-proxy.example.com/send" /></label>
+        <div class="row small">
+          <label><input type="checkbox" id="sendStartNotif" checked /> ส่งเมื่ิอเริ่ม</label>
+          <label><input type="checkbox" id="sendNearNotif" checked /> ส่งใกล้หมด</label>
+          <label><input type="checkbox" id="sendEndNotif" checked /> ส่งเมื่ิอจบ</label>
+        </div>
+        <div class="row">
+          <button id="testTg" class="btn primary">ทดสอบส่ง</button>
+          <button id="clearTg" class="btn ghost">ล้าง</button>
+        </div>
+        <div id="tgResult" class="small debug"></div>
+      </div>
+
+      <div class="card compact">
+        <h3>History</h3>
+        <div class="filters">
+          <input type="date" id="filterStart" />
+          <input type="date" id="filterEnd" />
+          <button id="applyFilter" class="btn ghost">กรอง</button>
+        </div>
+        <div class="logs"><table id="logsTable"><thead><tr><th>ประเภท</th><th>เริ่ม</th><th>จบ</th><th>นาที</th></tr></thead><tbody></tbody></table></div>
+        <div class="row">
+          <button id="exportCsv" class="btn ghost">Export CSV</button>
+          <button id="clearAll" class="btn danger">ลบทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="card compact small">
+        <div>โฮสต์ออนไลน์: น้องแนบ proxy Node.js ให้พร้อมใช้งาน (ดู README)</div>
+        <div class="small">แนะนำ: เปิดใน server (localhost) เพื่อให้ Notification และ Telegram ทำงานถูกต้อง</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer small">NOAH345 💜 — V11 PRO • อัปเดต UI และเตรียมให้โฮสต์ออนไลน์ได้</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

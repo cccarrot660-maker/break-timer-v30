@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>gxHo Break-Timer — NOAH345 💜 | Profiles</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <div style="max-width:980px;margin:22px auto;padding:18px;">
+    <div class="noah-brand">NOAH345 💜 — gxHo Break-Timer</div>
+
+    <main class="card" role="main" aria-labelledby="loginTitle">
+      <h1 id="loginTitle">โปรไฟล์ผู้ใช้ / Profiles</h1>
+      <p class="muted">สร้างโปรไฟล์เพื่อใช้ล็อกอินด้วย PIN ของแต่ละโปรไฟล์ (ข้อมูลถูกเก็บเฉพาะเครื่อง)</p>
+
+      <section id="profilesSection" style="margin-top:12px">
+        <h2 style="font-size:16px">เลือกโปรไฟล์เพื่อเข้าสู่ระบบ</h2>
+        <div id="profilesList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
+      </section>
+
+      <hr style="margin:18px 0;border:none;border-top:1px solid #f1f3f5">
+
+      <section id="createProfileSection">
+        <h2 style="font-size:16px">สร้างโปรไฟล์ใหม่</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+          <input id="profileName" type="text" placeholder="ชื่อผู้ใช้ (เช่น คุณพี่)" style="width:240px;padding:8px;border-radius:8px;border:1px solid #eee" />
+          <input id="profileNote" type="text" placeholder="หมายเหตุ (เช่น มือถือ, หรืองาน)" style="width:320px;padding:8px;border-radius:8px;border:1px solid #eee" />
+          <input id="profilePin" type="password" placeholder="ตั้ง PIN (อย่างน้อย 4 หลัก)" style="width:200px;padding:8px;border-radius:8px;border:1px solid #eee" />
+          <button id="createProfileBtn" class="btn">สร้างโปรไฟล์</button>
+        </div>
+        <div class="muted">เมื่อสร้างแล้ว โปรไฟล์จะปรากฏในรายการ สามารถกำหนด PIN ใหม่ หรือลบโปรไฟล์ได้</div>
+      </section>
+
+      <hr style="margin:18px 0;border:none;border-top:1px solid #f1f3f5">
+
+      <section id="profileRecoverySection">
+        <h2 style="font-size:16px">กู้โปรไฟล์ด้วย Recovery Code</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="profileRecoveryInput" type="text" placeholder="วาง Recovery Code ที่ได้" style="width:520px;padding:8px;border-radius:8px;border:1px solid #eee" />
+          <button id="useProfileRecoveryBtn" class="btn">ใช้ Recovery Code</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  <script src="login.js"></script>
+</body>
+</html>
