@@ -220,9 +220,6 @@
   // restore running session
   function init(){ renderLogs(); updateStats(); const logs = loadLogs(); for(let i=logs.length-1;i>=0;i--){ if(!logs[i].end){ startTime = logs[i].start; running=true; currentLogIndex=i; interval=setInterval(updateDisplay,1000); break; } } updateDisplay(); }
   init();
-
-  function nowISO(){ return new Date().toISOString(); }
-
 })();
 
 // ---- Added Daily Remaining + Telegram Notify ----
