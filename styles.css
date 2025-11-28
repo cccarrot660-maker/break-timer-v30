@@ -750,3 +750,414 @@ tr:hover td {
   .actionBtn { padding:6px 10px; font-size:12px; border-radius:12px; }
   #logsTable thead th { font-size:13px; }
 }
+
+
+
+/* Modal & form: force white text and light placeholders for better contrast */
+#historyEditModal,
+#historyEditModal * {
+  color: #ffffff !important;
+  box-sizing: border-box;
+}
+
+/* Inputs inside modal */
+#historyEditModal input[type="text"],
+#historyEditModal input[type="password"],
+#historyEditModal input[type="datetime-local"],
+#historyEditModal textarea,
+#historyEditModal select {
+  color: #ffffff !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/* Placeholder color */
+#historyEditModal input::placeholder,
+#historyEditModal textarea::placeholder {
+  color: rgba(255,255,255,0.65) !important;
+}
+
+/* Modal header */
+#historyEditModal h3 {
+  color: #ffffff !important;
+  margin-bottom: 8px;
+}
+
+/* Buttons in modal: ensure text visible */
+#historyEditModal .btn {
+  color: #ffffff !important;
+}
+
+/* Make modal background slightly darker to increase contrast */
+#historyEditModal > div {
+  background: rgba(10,12,20,0.95) !important;
+}
+
+
+
+/* NOAH345 gradient button for modal save */
+#historyEditModal .btn.primary {
+  background: linear-gradient(135deg, #9d4edd 0%, #6b21a8 50%, #4c1d95 100%);
+  box-shadow: 0 8px 24px rgba(157,78,221,0.25);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #fff !important;
+}
+
+/* Modal base (hidden by default but in DOM) */
+#historyEditModal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 260ms ease, transform 260ms ease, visibility 260ms;
+}
+
+/* inner box animation - slide up */
+#historyEditModal > div {
+  transform: translateY(12px) scale(0.995);
+  transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 260ms ease;
+  opacity: 0;
+}
+
+/* When open, show modal */
+#historyEditModal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#historyEditModal.open > div {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Fade overlay slightly darker for focus */
+#historyEditModal {
+  background: rgba(2,4,10,0.6) !important;
+}
+
+/* Add subtle pulse to primary button on hover */
+#historyEditModal .btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(109,40,217,0.28);
+}
+
+/* Smooth transitions for inputs focus */
+#historyEditModal input:focus, #historyEditModal textarea:focus {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(109,40,217,0.12);
+  border-color: rgba(157,78,221,0.6) !important;
+}
+
+/* Ensure action buttons visible and spaced */
+#historyEditModal .btn { min-width: 86px; }
+
+
+
+/* ===== Modal Input Improved Visibility (NOAH345 v6) ===== */
+#historyEditModal input[type="text"],
+#historyEditModal input[type="datetime-local"],
+#historyEditModal input[type="password"],
+#historyEditModal textarea,
+#historyEditModal select {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  color: #ffffff !important;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+}
+
+#historyEditModal input::placeholder,
+#historyEditModal textarea::placeholder {
+  color: rgba(255,255,255,0.55) !important;
+}
+
+#historyEditModal input:focus,
+#historyEditModal textarea:focus {
+  outline: none !important;
+  border-color: #9d4edd !important;
+  box-shadow: 0 0 12px rgba(157,78,221,0.55) !important;
+}
+
+/* Modal box brighter */
+#historyEditModal > div {
+  background: rgba(20,22,35,0.92) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+
+
+/* Modal root styling (use class .open toggled) */
+#historyEditModal {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,4,10,0.35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 320ms ease, visibility 320ms;
+  z-index: 10000;
+}
+
+/* Glass-effect inner box */
+#historyEditModal .modal-inner {
+  width: 96%;
+  max-width: 720px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 18px;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  box-shadow: 0 12px 40px rgba(12,12,20,0.6);
+  transform: translateY(12px) scale(0.995);
+  opacity: 0;
+  transition: transform 520ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease;
+}
+
+/* When open */
+#historyEditModal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#historyEditModal.open .modal-inner {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  animation: modalSpring 520ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* spring-like keyframes */
+@keyframes modalSpring {
+  0% { transform: translateY(18px) scale(0.995); }
+  60% { transform: translateY(-6px) scale(1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* fields layout */
+.modal-fields { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.field-label { font-size:13px; color: rgba(255,255,255,0.9); }
+
+/* input with icon wrapper */
+.input-icon-wrap { position:relative; display:flex; align-items:center; }
+.input-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; pointer-events:none; opacity:0.95; }
+.input-icon + input { padding-left:42px !important; }
+
+/* inputs inherit previous improved styles; ensure border-radius and padding */
+#historyEditModal input, #historyEditModal textarea {
+  width:100%;
+  box-sizing:border-box;
+  border-radius:8px;
+  height:42px;
+  font-size:14px;
+}
+
+/* modal actions align */
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+
+/* small icon on save button */
+.btn-icon { margin-right:8px; }
+
+/* ensure emoji icons look crisp on dark bg */
+.input-icon { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }
+
+/* responsive tweaks */
+@media (max-width:640px){
+  #historyEditModal .modal-inner { padding:12px; }
+  .modal-actions { flex-direction:column-reverse; gap:8px; }
+}
+
+
+
+/* Force datetime-local and related input text color to white across browsers */
+/* Chrome / Edge / Safari (WebKit) */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"]::placeholder,
+input[type="date"]::placeholder,
+input[type="time"]::placeholder {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* WebKit specific internal parts for datetime display */
+input[type="datetime-local"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field,
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* Firefox datetime (use color and appearance reset) */
+input[type="datetime-local"]::-moz-focus-inner,
+input[type="date"]::-moz-focus-inner {
+  color: #ffffff !important;
+}
+
+/* ensure icon wrapper text also white */
+.input-icon { color: #ffffff !important; }
+/* ensure placeholder color consistent */
+#historyEditModal input::placeholder, #historyEditModal textarea::placeholder {
+  color: rgba(255,255,255,0.6) !important;
+}
+
+/* If browser applies shadow DOM or autofill, force fill color */
+input:-webkit-autofill { -webkit-text-fill-color: #ffffff !important; transition: background-color 5000s ease-in-out 0s; }
+
+
+
+/* ===== Enhanced form controls (v11) - nicer inputs, selects, checkboxes ===== */
+
+/* Base for inputs/selects/textareas */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
+textarea,
+select {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #ffffff;
+  padding: 10px 14px;
+  height: 44px;
+  border-radius: 10px;
+  box-shadow: inset 0 -2px 8px rgba(0,0,0,0.35), 0 4px 18px rgba(0,0,0,0.35);
+  transition: box-shadow 220ms ease, transform 160ms ease, border-color 200ms ease;
+  font-size: 14px;
+  line-height: 1.2;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Make datetime fields slightly taller for readability */
+input[type="datetime-local"], input[type="date"], input[type="time"] {
+  height:46px;
+  padding-left: 44px; /* space for icon if present */
+}
+
+/* placeholder */
+input::placeholder, textarea::placeholder {
+  color: rgba(255,255,255,0.55);
+  opacity: 1;
+}
+
+/* focus/hover states */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: rgba(157,78,221,0.9);
+  box-shadow: 0 6px 30px rgba(109,40,217,0.14), inset 0 0 6px rgba(157,78,221,0.04);
+  transform: translateY(-1px);
+}
+
+/* small inputs in settingsGrid and inline controls */
+.settingsGrid input, .settingsGrid select, .quick-add input {
+  height:38px;
+  padding:8px 12px;
+  border-radius:8px;
+  font-size:13px;
+}
+
+/* icon wrapper reuse: align icon nicely beside inputs */
+.input-icon-wrap { position:relative; display:flex; align-items:center; }
+.input-icon-wrap .input-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; opacity:0.95; }
+.input-icon-wrap input { padding-left:42px !important; }
+
+/* select caret styling */
+select { background-image: linear-gradient(45deg, transparent 50%, #9d4edd 50%), linear-gradient(135deg, #00d4ff 50%, transparent 50%); background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px); background-size: 8px 8px, 8px 8px; background-repeat: no-repeat; padding-right: 38px; }
+
+/* checkbox and radio styling - larger clickable area */
+input[type="checkbox"], input[type="radio"] { width:18px; height:18px; accent-color: #9d4edd; }
+
+/* compact form rows */
+.field { display:flex; gap:12px; align-items:center; }
+.field .label { min-width:110px; color: rgba(255,255,255,0.9); }
+
+/* responsive tweaks */
+@media (max-width: 640px) {
+  input[type="text"], input[type="number"], textarea, select { height:44px; font-size:14px; }
+  .modal-actions { flex-direction:column-reverse; }
+}
+
+/* subtle input focus icon color */
+.input-icon-wrap input:focus + .input-icon, .input-icon-wrap input:focus ~ .input-icon {
+  filter: drop-shadow(0 6px 18px rgba(157,78,221,0.18));
+}
+
+/* make the quick add button and action buttons consistent */
+.btn { transition: transform 160ms ease, box-shadow 200ms ease; }
+.btn:active { transform: translateY(1px); }
+
+
+
+/* Fonts: Inter + Poppins applied to inputs and UI */
+body, input, textarea, select, button {
+  font-family: 'Inter', 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+/* Floating label styles */
+.floating-field { position: relative; }
+.floating-field label {
+  position: absolute;
+  left: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 180ms ease, font-size 160ms ease, top 180ms ease;
+  color: rgba(255,255,255,0.65);
+  pointer-events: none;
+  font-size: 14px;
+}
+.floating-field input:focus + label,
+.floating-field input:not(:placeholder-shown) + label,
+.floating-field input.has-value + label {
+  top: -8px;
+  transform: translateY(0);
+  font-size: 12px;
+  color: rgba(157,78,221,0.95);
+}
+
+/* ensure label shrinks when input has text set by script */
+.floating-field input { padding-left: 44px; }
+
+/* SVG icon color */
+.svg-icon svg { color: #9ad8ff; stroke: currentColor; fill: none; }
+.svg-icon { color: rgba(157,78,221,0.9); }
+
+/* adjust calendar input text color already enforced earlier */
+
+
+
+/* v13: external sprite usage and icon styling */
+.icon { width:18px; height:18px; display:inline-block; vertical-align:middle; color: rgba(157,78,221,0.95); }
+.input-icon.icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.98; }
+.input-icon-wrap input { padding-left:44px !important; }
+
+/* Apply icons to quick-add and settings if data-icon attr present (JS will inject markup) */
+.input-icon.injected { left:10px; top:50%; transform:translateY(-50%); font-size:16px; }
+
+/* Save button pulse and check animation */
+.btn-saving { animation: btnPulse 600ms ease; }
+@keyframes btnPulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+.btn-check { position: relative; overflow: visible; }
+.btn-check .check-svg { position:absolute; right:14px; top:50%; transform:translateY(-50%) scale(0); opacity:0; transition: transform 260ms cubic-bezier(.2,.9,.2,1), opacity 180ms ease; color: #fff; }
+.btn-check.checked .check-svg { transform: translateY(-50%) scale(1); opacity:1; }
+
+/* small success sound feedback won't affect styles */
+
+/* ensure consistent icon color in forms */
+.input-icon.icon use { stroke: currentColor; }

@@ -518,3 +518,407 @@ async function sendDailySummary(){
   });
 
 })();
+
+// ---- Merged fixes.js (inlined) ----
+(function(){
+
+// fixes.js - runtime patches for UI, Telegram resilience, and history restore
+(function(){
+  'use strict';
+  const LOG_KEY = 'bt_v11_logs';
+  const UI_STATE_KEY = 'breaker_ui_state_v1';
+
+  function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); }catch(e){ return []; } }
+  function saveLogs(v){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(v||[])); }catch(e){} }
+
+  function secs(s,e){ if(!s) return 0; try{ const st=new Date(s); const ed=e?new Date(e):new Date(); return Math.max(0, Math.floor((ed-st)/1000)); }catch(e){ return 0; } }
+
+  // If history appears empty after refresh, try simple recovery from other keys
+  function tryRecoverLogs(){
+    const candidateKeys = Object.keys(localStorage).filter(k=>/log|history|breaker/i.test(k));
+    if(candidateKeys.indexOf(LOG_KEY)!==-1) return; // already present
+    for(const k of candidateKeys){
+      try{
+        const v = JSON.parse(localStorage.getItem(k));
+        if(Array.isArray(v) && v.length>0 && v[0] && v[0].start){
+          // migrate to expected key
+          localStorage.setItem(LOG_KEY, JSON.stringify(v));
+          console.info('Recovered logs from', k);
+          return;
+        }
+      }catch(e){}
+    }
+  }
+
+  // Re-render the history table if app's renderLogs exists; otherwise build a minimal renderer
+  function renderHistoryIfMissing(){
+    tryRecoverLogs();
+    const logs = loadLogs();
+    const tbody = document.querySelector('#logsTable tbody');
+    if(!tbody) return;
+    // If table already populated, do nothing
+    if(tbody.children.length>0) return;
+    tbody.innerHTML = '';
+    logs.slice().reverse().forEach(l=>{
+      const tr = document.createElement('tr');
+      const mins = Math.round(secs(l.start,l.end)/60);
+      tr.innerHTML = `<td>${l.type||''}</td><td>${l.start?new Date(l.start).toLocaleString('th-TH'):'-'}</td><td>${l.end?new Date(l.end).toLocaleString('th-TH'):'-'}</td><td>${mins}</td><td class="actionCell"></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Telegram resilient sender (can use proxy or direct). Returns a promise resolving {ok, detail}
+  async function sendTelegramResilient(token, chatId, text, proxyUrl){
+    if(!token||!chatId) return {ok:false, error:'missing token/chatId'};
+    try{
+      if(proxyUrl){
+        const r = await fetch(proxyUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({token, chatId, text})});
+        const j = await r.json().catch(()=>null);
+        return r.ok ? {ok:true, detail:j} : {ok:false, status:r.status, detail:j};
+      } else {
+        const r = await fetch('https://api.telegram.org/bot'+token+'/sendMessage', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chat_id:chatId, text, parse_mode:'HTML'})});
+        const j = await r.json().catch(()=>null);
+        return (r.ok && j && j.ok) ? {ok:true, detail:j} : {ok:false, status:r.status, detail:j};
+      }
+    }catch(e){ return {ok:false, error: e.message}; }
+  }
+
+  // Periodic check: send daily-remaining when <= threshold once per day
+  const DAILY_FLAG_KEY = 'bt_v11_daily_rem_sent_on';
+  function shouldSendDailyFlagToday(){ const v = localStorage.getItem(DAILY_FLAG_KEY); if(!v) return true; const d = new Date(v); const now = new Date(); return d.toDateString() !== now.toDateString(); }
+  function markDailyFlagToday(){ localStorage.setItem(DAILY_FLAG_KEY, new Date().toISOString()); }
+
+  async function checkDailyRemainingAndNotify(){
+    try{
+      const dailyTargetEl = document.querySelector('#dailyTargetInput');
+      if(!dailyTargetEl) return;
+      const target = Number(dailyTargetEl.value||0);
+      if(target<=0) return;
+      const logs = loadLogs();
+      let sumToday = 0;
+      const today = new Date(); today.setHours(0,0,0,0);
+      logs.forEach(l=>{ const st=new Date(l.start); if(st>=today){ const mins = Math.round(secs(l.start,l.end)/60); if(mins>0) sumToday+=mins; } });
+      const remain = Math.max(0, target - sumToday);
+      // update UI small text if present
+      const remainEl = document.querySelector('#sumRemainBarText');
+      if(remainEl) remainEl.textContent = remain;
+      // if remain <=110 and not sent today, send telegram notification
+      if(remain <= 110 && remain > 0 && shouldSendDailyFlagToday()){
+        const token = (document.querySelector('#tgToken')||{value:''}).value.trim();
+        const chatId = (document.querySelector('#tgChatId')||{value:''}).value.trim();
+        const proxy = (document.querySelector('#proxyUrl')||{value:''}).value.trim();
+        if(token && chatId){
+          const txt = `<b>แจ้งเตือนเวลาคงเหลือรายวัน</b>\nเวลาคงเหลือ: ${remain} นาที\nเป้าวันนี้: ${target} นาที`;
+          const res = await sendTelegramResilient(token, chatId, txt, proxy);
+          if(res.ok) markDailyFlagToday();
+          // update debug
+          const tgResult = document.querySelector('#tgResult'); if(tgResult) tgResult.textContent = res.ok ? 'แจ้งเวลาคงเหลือส่งสำเร็จ' : ('แจ้งเวลาคงเหลือไม่สำเร็จ: '+(res.error||res.status));
+        }
+      }
+    }catch(e){ console.error('checkDailyRemainingAndNotify', e); }
+  }
+
+  // Periodic near-end check to ensure app's near-end sends if not already triggered
+  async function periodicNearEndFallback(){
+    try{
+      const sendNear = document.querySelector('#sendNearNotif');
+      if(!sendNear || !sendNear.checked) return;
+      // find active log (no end)
+      const logs = loadLogs();
+      const active = logs.slice().reverse().find(l=>!l.end);
+      if(!active) return;
+      const limit = Number((document.querySelector('#limitMinutes')||{value:30}).value||30);
+      const warn = Number((document.querySelector('#warnBefore')||{value:5}).value||5);
+      const elapsed = Math.round(secs(active.start)/60);
+      const remain = Math.max(0, limit - elapsed);
+      if(remain <= warn && remain>0){
+        // send near-end if not sent for this active start
+        const flagKey = 'bt_v11_near_sent_' + active.start;
+        if(localStorage.getItem(flagKey)) return;
+        const token = (document.querySelector('#tgToken')||{value:''}).value.trim();
+        const chatId = (document.querySelector('#tgChatId')||{value:''}).value.trim();
+        const proxy = (document.querySelector('#proxyUrl')||{value:''}).value.trim();
+        if(token && chatId){
+          const msg = `<b>เตือนใกล้ครบ</b>\nประเภท: ${active.type}\nเริ่ม: ${new Date(active.start).toLocaleString('th-TH')}\nใช้เวลา: ${elapsed} นาที\nเวลาเหลือประมาณ: ${remain} นาที`;
+          const res = await sendTelegramResilient(token, chatId, msg, proxy);
+          if(res.ok) localStorage.setItem(flagKey, '1');
+          const tgResult = document.querySelector('#tgResult'); if(tgResult) tgResult.textContent = res.ok ? 'near-end สำเร็จ' : ('near-end ผิดพลาด: '+(res.error||res.status));
+        }
+      }
+    }catch(e){ console.error('periodicNearEndFallback', e); }
+  }
+
+  // Attach handlers for testTg button if present to use resilient sender
+  function wireTestButton(){
+    const btn = document.querySelector('#testTg');
+    if(!btn) return;
+    btn.removeEventListener('click', btn._fix_handler);
+    btn._fix_handler = async function(){
+      const token = (document.querySelector('#tgToken')||{value:''}).value.trim();
+      const chatId = (document.querySelector('#tgChatId')||{value:''}).value.trim();
+      const proxy = (document.querySelector('#proxyUrl')||{value:''}).value.trim();
+      if(!token || !chatId) return alert('กรุณาใส่ Bot Token และ Chat ID');
+      const txt = '<b>ทดสอบจาก Break Timer (fixes)</b>';
+      const res = await sendTelegramResilient(token, chatId, txt, proxy);
+      const tgResult = document.querySelector('#tgResult'); if(tgResult) tgResult.textContent = res.ok ? 'ส่งสำเร็จ (fixes)' : ('ส่งไม่สำเร็จ (fixes): '+(res.error||res.status));
+    };
+    btn.addEventListener('click', btn._fix_handler);
+  }
+
+  // Run on DOM ready
+  function init(){
+    tryRecoverLogs();
+    renderHistoryIfMissing();
+    wireTestButton();
+    // run periodic checks
+    setInterval(checkDailyRemainingAndNotify, 30*1000); // every 30s
+    setInterval(periodicNearEndFallback, 15*1000); // every 15s
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+  // expose for debugging
+  window.__bt_fixes = { loadLogs, saveLogs, tryRecoverLogs };
+})();
+
+})();
+// ---- End merged fixes ----
+
+
+/* HISTORY EDIT MODAL WIRING */
+(function(){
+  const LOG_KEY = 'bt_v11_logs';
+  function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){return[];} }
+  function saveLogs(v){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(v||[])); }catch(e){} }
+
+  // helper to toISO input value for datetime-local
+  function toInputLocal(iso){
+    if(!iso) return '';
+    const d = new Date(iso);
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    const localISO = new Date(d.getTime() - tzOffset).toISOString().slice(0,16);
+    return localISO;
+  }
+  function fromInputLocal(val){
+    if(!val) return null;
+    // val is local YYYY-MM-DDTHH:MM
+    const d = new Date(val);
+    return d.toISOString();
+  }
+
+  const modal = document.getElementById('historyEditModal');
+  const in_type = document.getElementById('edit_type');
+  const in_start = document.getElementById('edit_start');
+  const in_end = document.getElementById('edit_end');
+  const in_note = document.getElementById('edit_note');
+  const btn_save = document.getElementById('edit_save');
+  const btn_delete = document.getElementById('edit_delete');
+  const btn_cancel = document.getElementById('edit_cancel');
+  let currentIndex = null; // index in stored logs array
+
+  function openModalForIndex(idx){
+    const logs = loadLogs();
+    const l = logs[idx];
+    if(!l) return;
+    currentIndex = idx;
+    in_type.value = l.type || '';
+    in_note.value = l.note || '';
+    in_start.value = toInputLocal(l.start);
+    in_end.value = l.end ? toInputLocal(l.end) : '';
+    modal.classList.add('open'); setTimeout(()=>{ try{ document.getElementById('edit_type') && document.getElementById('edit_type').focus(); }catch(e){} }, 80);
+  }
+  function closeModal(){ modal.classList.remove('open'); currentIndex=null; }
+
+  btn_cancel && btn_cancel.addEventListener('click', closeModal);
+
+  btn_save && btn_save.addEventListener('click', ()=>{
+    if(currentIndex==null) return alert('No entry selected');
+    const logs = loadLogs();
+    const idx = currentIndex;
+    logs[idx].type = in_type.value || logs[idx].type;
+    logs[idx].note = in_note.value || logs[idx].note || '';
+    const ns = fromInputLocal(in_start.value);
+    const ne = fromInputLocal(in_end.value);
+    if(ns) logs[idx].start = ns;
+    logs[idx].end = ne;
+    saveLogs(logs);
+    // try to call renderLogs if exists, else refresh table
+    if(typeof renderLogs === 'function') try{ renderLogs(); }catch(e){ /* ignore */ }
+    // hide modal
+    closeModal();
+    // update stats if exists
+    if(typeof updateStats === 'function') try{ updateStats(); }catch(e){}
+  });
+
+  btn_delete && btn_delete.addEventListener('click', ()=>{
+    if(currentIndex==null) return alert('No entry selected');
+    if(!confirm('ยืนยันการลบรายการนี้?')) return;
+    const logs = loadLogs();
+    logs.splice(currentIndex,1);
+    saveLogs(logs);
+    if(typeof renderLogs === 'function') try{ renderLogs(); }catch(e){}
+    closeModal();
+    if(typeof updateStats === 'function') try{ updateStats(); }catch(e){}
+  });
+
+  // add action buttons to each row dynamically using event delegation
+  document.addEventListener('click', function(e){
+    // look for edit button
+    const el = e.target;
+    if(el && el.matches && el.matches('.action-edit')){
+      const idx = parseInt(el.getAttribute('data-idx'),10);
+      openModalForIndex(idx);
+      e.preventDefault(); return;
+    }
+    if(el && el.matches && el.matches('.action-delete')){
+      const idx = parseInt(el.getAttribute('data-idx'),10);
+      if(!confirm('ยืนยันการลบรายการ?')) return;
+      const logs = loadLogs();
+      logs.splice(idx,1);
+      saveLogs(logs);
+      if(typeof renderLogs === 'function') try{ renderLogs(); }catch(e){}
+      if(typeof updateStats === 'function') try{ updateStats(); }catch(e){}
+      e.preventDefault(); return;
+    }
+  }, true);
+
+  // Enhance renderLogs to inject action buttons. If original renderLogs exists, we wrap it.
+  if(typeof renderLogs === 'function'){
+    const origRender = renderLogs;
+    window.renderLogs = function(filterStart, filterEnd){
+      origRender(filterStart, filterEnd);
+      try{
+        // After original renders (which uses reversed logs), augment rows
+        const tbody = document.querySelector('#logsTable tbody');
+        if(!tbody) return;
+        // Map displayed rows back to stored index: stored logs are in natural order, original code reversed them.
+        const stored = loadLogs();
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.forEach((tr, displayIdx)=>{
+          // compute index in stored: since original used .slice().reverse(), displayIdx 0 => last stored index
+          const storedIdx = stored.length - 1 - displayIdx;
+          const cell = tr.querySelector('.actionCell') || tr.insertCell(-1);
+          // clear existing
+          if(cell) cell.innerHTML = '';
+          // create buttons
+          const btnEdit = document.createElement('button');
+          btnEdit.className = 'action-edit actionBtn';
+          btnEdit.setAttribute('data-idx', storedIdx);
+          btnEdit.textContent = 'แก้ไข';
+          const btnDel = document.createElement('button');
+          btnDel.className = 'action-delete actionBtn';
+          btnDel.setAttribute('data-idx', storedIdx);
+          btnDel.textContent = 'ลบ';
+          if(cell) cell.appendChild(btnEdit); cell && cell.appendChild(btnDel);
+        });
+      }catch(e){ console.error('enhance renderLogs', e); }
+    };
+  } else {
+    // If renderLogs not present, attempt to populate action buttons after DOM loaded
+    document.addEventListener('DOMContentLoaded', function(){
+      const tbody = document.querySelector('#logsTable tbody');
+      if(!tbody) return;
+      // inject edit buttons for each row
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.forEach((tr, i)=>{
+        const cell = tr.querySelector('.actionCell') || tr.insertCell(-1);
+        const btnEdit = document.createElement('button');
+        btnEdit.className = 'action-edit actionBtn';
+        btnEdit.setAttribute('data-idx', i);
+        btnEdit.textContent = 'แก้ไข';
+        const btnDel = document.createElement('button');
+        btnDel.className = 'action-delete actionBtn';
+        btnDel.setAttribute('data-idx', i);
+        btnDel.textContent = 'ลบ';
+        cell.appendChild(btnEdit); cell.appendChild(btnDel);
+      });
+    });
+  }
+})();
+
+
+
+/* Floating label helpers for modal fields */
+(function(){
+  function applyFloating(el){
+    try{
+      el.addEventListener('input', function(){
+        if(this.value && this.value.length>0) this.classList.add('has-value'); else this.classList.remove('has-value');
+      });
+      // init
+      if(el.value && el.value.length>0) el.classList.add('has-value');
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    ['edit_type','edit_start','edit_end','edit_note'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) applyFloating(el);
+    });
+    // set aria-hidden for modal when not open
+    const modal = document.getElementById('historyEditModal');
+    if(modal){
+      const obs = new MutationObserver(()=>{ modal.setAttribute('aria-hidden', modal.classList.contains('open') ? 'false' : 'true'); });
+      obs.observe(modal, { attributes: true, attributeFilter: ['class'] });
+      modal.setAttribute('aria-hidden', modal.classList.contains('open') ? 'false' : 'true');
+    }
+  });
+})();
+
+
+
+/* v13: Inject icons from sprite into inputs with data-icon and handle save animation + sound */
+(function(){
+  function injectIcons(){
+    document.querySelectorAll('input[data-icon], select[data-icon]').forEach(el=>{
+      // avoid double-inject
+      if(el.parentElement && el.parentElement.querySelector('.input-icon.injected')) return;
+      const icon = el.getAttribute('data-icon'); // expected calendar, tag, note
+      if(!icon) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'input-icon-wrap';
+      // create icon svg use
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.classList.add('input-icon','icon','injected');
+      const use = document.createElementNS('http://www.w3.org/2000/svg','use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink','href','#icon-' + icon);
+      svg.appendChild(use);
+      // move element into wrap
+      el.parentNode.insertBefore(wrap, el);
+      wrap.appendChild(svg);
+      wrap.appendChild(el);
+    });
+  }
+
+  function wireSaveAnimation(){
+    const saveBtn = document.getElementById('edit_save');
+    if(!saveBtn) return;
+    // create check svg element inside button
+    if(!saveBtn.querySelector('.check-svg')){
+      const chk = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      chk.setAttribute('viewBox','0 0 24 24');
+      chk.setAttribute('width','18'); chk.setAttribute('height','18');
+      chk.classList.add('check-svg');
+      chk.innerHTML = '<use href="#icon-check"></use>';
+      saveBtn.appendChild(chk);
+    }
+    // small click sound (short blip) - base64 wav (very short)
+    const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=');
+    saveBtn.addEventListener('click', function(e){
+      // play sound and pulse animation
+      try{ audio.currentTime = 0; audio.play().catch(()=>{}); }catch(e){}
+      saveBtn.classList.add('btn-saving');
+      saveBtn.classList.add('btn-check');
+      // show checked state
+      saveBtn.classList.add('checked');
+      setTimeout(()=>{ saveBtn.classList.remove('btn-saving'); setTimeout(()=>{ saveBtn.classList.remove('checked'); }, 900); }, 500);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    injectIcons();
+    wireSaveAnimation();
+    // also observe DOM for dynamically added inputs
+    const obs = new MutationObserver(()=>{ injectIcons(); wireSaveAnimation(); });
+    obs.observe(document.body, { childList:true, subtree:true });
+  });
+})();
