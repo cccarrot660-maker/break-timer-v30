@@ -3,48 +3,68 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>gxHo Break-Timer — NOAH345 💜 | Profiles</title>
+  <title>NOAH345 💜 — เลือกโปรไฟล์</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="config.js"></script>
+  <script defer src="login.js"></script>
 </head>
-<body>
-  <div style="max-width:980px;margin:22px auto;padding:18px;">
-    <div class="noah-brand">NOAH345 💜 — gxHo Break-Timer</div>
+<body class="login-bg">
 
-    <main class="card" role="main" aria-labelledby="loginTitle">
-      <h1 id="loginTitle">โปรไฟล์ผู้ใช้ / Profiles</h1>
-      <p class="muted">สร้างโปรไฟล์เพื่อใช้ล็อกอินด้วย PIN ของแต่ละโปรไฟล์ (ข้อมูลถูกเก็บเฉพาะเครื่อง)</p>
+  <!-- decorative blobs (behind card) -->
+  <div class="decor-blob blob-1" aria-hidden="true"></div>
+  <div class="decor-blob blob-2" aria-hidden="true"></div>
 
-      <section id="profilesSection" style="margin-top:12px">
-        <h2 style="font-size:16px">เลือกโปรไฟล์เพื่อเข้าสู่ระบบ</h2>
-        <div id="profilesList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
-      </section>
-
-      <hr style="margin:18px 0;border:none;border-top:1px solid #f1f3f5">
-
-      <section id="createProfileSection">
-        <h2 style="font-size:16px">สร้างโปรไฟล์ใหม่</h2>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-          <input id="profileName" type="text" placeholder="ชื่อผู้ใช้ (เช่น คุณพี่)" style="width:240px;padding:8px;border-radius:8px;border:1px solid #eee" />
-          <input id="profileNote" type="text" placeholder="หมายเหตุ (เช่น มือถือ, หรืองาน)" style="width:320px;padding:8px;border-radius:8px;border:1px solid #eee" />
-          <input id="profilePin" type="password" placeholder="ตั้ง PIN (อย่างน้อย 4 หลัก)" style="width:200px;padding:8px;border-radius:8px;border:1px solid #eee" />
-          <button id="createProfileBtn" class="btn">สร้างโปรไฟล์</button>
+  <main class="login-wrap">
+    <div class="login-card card" role="region" aria-label="ล็อกอิน">
+      <div class="login-brand">
+        <div class="brand-avatar" aria-hidden="true">💜</div>
+        <div>
+          <div class="noah-brand">NOAH345 — Break Timer</div>
+          <div class="lead muted">ล็อกอินด้วยโปรไฟล์ / PIN (ข้อมูลเก็บเฉพาะเครื่อง)</div>
         </div>
-        <div class="muted">เมื่อสร้างแล้ว โปรไฟล์จะปรากฏในรายการ สามารถกำหนด PIN ใหม่ หรือลบโปรไฟล์ได้</div>
-      </section>
+      </div>
 
-      <hr style="margin:18px 0;border:none;border-top:1px solid #f1f3f5">
-
-      <section id="profileRecoverySection">
-        <h2 style="font-size:16px">กู้โปรไฟล์ด้วย Recovery Code</h2>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="profileRecoveryInput" type="text" placeholder="วาง Recovery Code ที่ได้" style="width:520px;padding:8px;border-radius:8px;border:1px solid #eee" />
-          <button id="useProfileRecoveryBtn" class="btn">ใช้ Recovery Code</button>
+      <section id="profilesSection" class="profiles-section">
+        <h2 class="card-title">เลือกโปรไฟล์เพื่อเข้าสู่ระบบ</h2>
+        <div id="profilesList" class="profiles-list">
+          <!-- ตัวอย่างโปรไฟล์ ถ้า login.js ไม่มีข้อมูล จะโชว์ตัวอย่างนี้ -->
+          <div class="profile-row">
+            <div class="profile-info">
+              <strong>คุณพี่ ตัวอย่าง</strong>
+              <div class="muted small">มือถือ • เข้าสู่ระบบด้วย PIN</div>
+            </div>
+            <div class="profile-actions">
+              <input type="password" placeholder="PIN" aria-label="PIN สำหรับคุณพี่">
+              <button class="btn primary">เข้าสู่ระบบ</button>
+              <button class="btn ghost">ลบ</button>
+            </div>
+          </div>
         </div>
       </section>
 
-    </main>
-  </div>
-  <script src="login.js"></script>
+      <hr class="muted-hr" />
+
+      <section id="createProfileSection" class="create-section">
+        <h3 style="margin:0 0 8px 0;">สร้างโปรไฟล์ใหม่</h3>
+        <div class="grid-cols" style="gap:8px;">
+          <div style="flex:1;min-width:160px;"><input id="profileName" class="form-control" type="text" placeholder="ชื่อผู้ใช้ (เช่น คุณพี่)"></div>
+          <div style="flex:1;min-width:200px;"><input id="profileNote" class="form-control" type="text" placeholder="หมายเหตุ (เช่น มือถือ)"></div>
+          <div style="width:160px;"><input id="profilePin" class="form-control" type="password" placeholder="ตั้ง PIN (อย่างน้อย 4 หลัก)"></div>
+          <div style="min-width:120px;"><button id="createProfileBtn" class="btn primary">สร้างโปรไฟล์</button></div>
+        </div>
+        <p class="muted small" style="margin-top:8px;">เมื่อสร้างแล้ว โปรไฟล์จะปรากฏในรายการ สามารถตั้ง PIN ใหม่หรือลบได้</p>
+      </section>
+
+      <hr class="muted-hr" />
+
+      <section id="profileRecoverySection" class="recovery-section">
+        <h3 style="margin:0 0 8px 0;">กู้โปรไฟล์ด้วย Recovery Code</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="profileRecoveryInput" class="form-control" type="text" placeholder="วาง Recovery Code ที่ได้">
+          <button id="useProfileRecoveryBtn" class="btn ghost">ใช้ Recovery Code</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
 </body>
 </html>
