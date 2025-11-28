@@ -1,5 +1,6 @@
 /* ENFORCE AUTH (PROFILE / session) */
 (function(){
+  if (!document.querySelector('#timeLarge')) { console.log('app.js: skip init'); return; }
   try{
     const session = JSON.parse(localStorage.getItem('session_auth_v1') || 'null');
     if(session && session.expiresAt && Date.now() < session.expiresAt && session.profileId){
