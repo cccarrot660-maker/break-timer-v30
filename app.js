@@ -1,5 +1,6 @@
 /* ENFORCE AUTH (PROFILE / session) */
 (function(){
+  if (!document.querySelector('#timeLarge')) { console.log('app.js: skip init'); return; }
   try{
     const session = JSON.parse(localStorage.getItem('session_auth_v1') || 'null');
     if(session && session.expiresAt && Date.now() < session.expiresAt && session.profileId){
@@ -15,6 +16,29 @@
 (function(){
   'use strict';
   const qs = s=>document.querySelector(s);
+
+// === NOAH345 runtime hardening patch (added by ChatGPT) ===
+// Safe event binder: no-op when selector not present (prevents Uncaught TypeError on pages without certain elements)
+function on(selector, ev, handler){
+  try{
+    const el = qs(selector);
+    if(!el) return;
+    el.addEventListener(ev, handler);
+  }catch(e){
+    console.warn('on() failed for', selector, e);
+  }
+}
+// safe query selector (returns null if not found)
+function qSel(selector){ return qs(selector) || null; }
+
+// Avoid duplicate nowISO - expose as window utility
+if(typeof window.nowISO !== 'function'){
+  window.nowISO = ()=> new Date().toISOString();
+}
+const nowISO = window.nowISO;
+// === end NOAH345 patch ===
+
+
   const STORAGE_KEY = 'bt_v11_logs', SSET_KEY='bt_v11_settings';
   // Elements
   const timeLarge = qs('#timeLarge'), timerLabel = qs('#timerLabel'), timeInfo = qs('#timeInfo');
@@ -39,14 +63,12 @@
   function saveSettings(s){ try{ localStorage.setItem(SSET_KEY, JSON.stringify(s||{})); }catch(e){} }
   function loadLogs(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){return []; } }
   function saveLogs(v){ localStorage.setItem(STORAGE_KEY, JSON.stringify(v||[])); }
-
-  function nowISO(){ return new Date().toISOString(); }
-  function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'; }
+function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'; }
   function secs(s,e){ if(!s) return 0; const st=new Date(s), ed=e?new Date(e):new Date(); return Math.max(0, Math.floor((ed-st)/1000)); }
 
   // Telegram sender with optional proxy
   async function sendTelegram(token, chatId, text){
-    const proxy = (qs('#proxyUrl') ? qs('#proxyUrl').value.trim() : '');
+    const proxy = (qs('#proxyUrl') ? qs('#proxyUrl')?.value.trim() : '');
     try{
       if(proxy){
         const r = await fetch(proxy, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({token, chatId, text})});
@@ -99,7 +121,7 @@
     const limit = Number(limitMinutesEl.value||30); const warn = Number(warnBeforeEl.value||5);
     const remain = Math.max(0, limit*60 - totalSec); const remainMin = Math.ceil(remain/60);
     if(remain>0 && remain <= warn*60){
-      const token = (qs('#tgToken').value||'').trim(); const chatId = (qs('#tgChatId').value||'').trim();
+      const token = (qs('#tgToken')?.value||'').trim(); const chatId = (qs('#tgChatId')?.value||'').trim();
       if(!token||!chatId){ tgResult.textContent='ยังไม่ได้ตั้งค่า Bot Token/Chat ID'; return; }
       const usedMin = Math.round(totalSec/60);
       const msg = `<b>เตือนใกล้ครบ</b>
@@ -126,7 +148,7 @@
       // send start telegram
       const sendStart = qs('#sendStartNotif') && qs('#sendStartNotif').checked;
       if(sendStart){
-        const token=(qs('#tgToken').value||'').trim(), chatId=(qs('#tgChatId').value||'').trim();
+        const token=(qs('#tgToken')?.value||'').trim(), chatId=(qs('#tgChatId')?.value||'').trim();
         if(!token||!chatId){ tgResult.textContent='ยังไม่ได้ตั้งค่า Bot Token/Chat ID'; return; }
         const roundLimit = Number(limitMinutesEl.value||30);
         const msg = `<b>เริ่ม${modeSelect.value}</b>
@@ -150,7 +172,7 @@
       saveLogs(logs); running=false; startTime=null; pausedAt=null; elapsedPaused=0; clearInterval(interval); updateDisplay(); renderLogs(); updateStats();
       const sendEnd = qs('#sendEndNotif') && qs('#sendEndNotif').checked;
       if(sendEnd){
-        const token=(qs('#tgToken').value||'').trim(), chatId=(qs('#tgChatId').value||'').trim();
+        const token=(qs('#tgToken')?.value||'').trim(), chatId=(qs('#tgChatId')?.value||'').trim();
         if(!token||!chatId){ tgResult.textContent='ยังไม่ได้ตั้งค่า Bot Token/Chat ID'; return; }
         if(!finished){ tgResult.textContent='ไม่พบบันทึกที่จบ'; currentLogIndex=null; return; }
         const usedSec = secs(finished.start, finished.end); const usedMin = Math.round(usedSec/60);
@@ -171,14 +193,14 @@
   });
 
   // Manual form
-  qs('#manualToggle').addEventListener('click', ()=>{ if(manualForm) manualForm.classList.toggle('hidden'); });
+  on('#manualToggle','click', ()=>{ if(manualForm) manualForm.classList.toggle('hidden'); });
   manualSave.addEventListener('click', ()=>{
-    const t = (qs('#manualType').value||'พัก'), s = qs('#manualStart').value, e = qs('#manualEnd').value;
+    const t = (qs('#manualType')?.value||'พัก'), s = qs('#manualStart')?.value, e = qs('#manualEnd')?.value;
     if(!s){ alert('กรุณาระบุเวลาเริ่ม'); return; } if(e && new Date(e) < new Date(s)){ alert('เวลาจบต้องมากกว่าเวลาเริ่ม'); return; }
-    const logs = loadLogs(); logs.push({type:t, start:new Date(s).toISOString(), end:e?new Date(e).toISOString():null, note: qs('#manualNote').value||''}); saveLogs(logs); renderLogs(); updateStats();
-    qs('#manualType').value=''; qs('#manualStart').value=''; qs('#manualEnd').value=''; qs('#manualNote').value=''; manualForm.classList.add('hidden');
+    const logs = loadLogs(); logs.push({type:t, start:new Date(s).toISOString(), end:e?new Date(e).toISOString():null, note: qs('#manualNote')?.value||''}); saveLogs(logs); renderLogs(); updateStats();
+    (function(){ const el = qs('#manualType'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualStart'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualEnd'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualNote'); if(el) el.value = ''; })(); manualForm.classList.add('hidden');
   });
-  manualCancel.addEventListener('click', ()=>{ qs('#manualType').value=''; qs('#manualStart').value=''; qs('#manualEnd').value=''; qs('#manualNote').value=''; manualForm.classList.add('hidden'); });
+  manualCancel.addEventListener('click', ()=>{ (function(){ const el = qs('#manualType'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualStart'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualEnd'); if(el) el.value = ''; })(); (function(){ const el = qs('#manualNote'); if(el) el.value = ''; })(); manualForm.classList.add('hidden'); });
 
   // render logs
   function renderLogs(filterStart, filterEnd){
@@ -205,32 +227,134 @@
     }catch(e){ console.error('progress update err', e); }
   }
 
-  qs('#applyFilter').addEventListener('click', ()=>{ renderLogs(qs('#filterStart').value, qs('#filterEnd').value); });
-  qs('#clearAll').addEventListener('click', ()=>{ if(confirm('ลบบันทึกทั้งหมด?')){ localStorage.removeItem(STORAGE_KEY); renderLogs(); updateStats(); } });
-  qs('#exportCsv').addEventListener('click', ()=>{ const logs=loadLogs(); if(!logs.length){ alert('ไม่มีข้อมูล'); return; } const header=['ประเภท','เริ่ม','จบ','นาที']; const rows=logs.map(l=>[l.type,l.start,l.end||'',Math.round(secs(l.start,l.end)/60)]); const csv=[header,...rows].map(r=>r.map(c=>`"${(''+(c||'')).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='break_logs_v11.csv'; a.click(); URL.revokeObjectURL(url); });
+  on('#applyFilter','click', ()=>{ renderLogs(qs('#filterStart')?.value, qs('#filterEnd')?.value); });
+  on('#clearAll','click', ()=>{ if(confirm('ลบบันทึกทั้งหมด?')){ localStorage.removeItem(STORAGE_KEY); renderLogs(); updateStats(); } });
+  on('#exportCsv','click', ()=>{ const logs=loadLogs(); if(!logs.length){ alert('ไม่มีข้อมูล'); return; } const header=['ประเภท','เริ่ม','จบ','นาที']; const rows=logs.map(l=>[l.type,l.start,l.end||'',Math.round(secs(l.start,l.end)/60)]); const csv=[header,...rows].map(r=>r.map(c=>`"${(''+(c||'')).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='break_logs_v11.csv'; a.click(); URL.revokeObjectURL(url); });
 
   // test tg
-  qs('#testTg').addEventListener('click', async ()=>{ const token=(qs('#tgToken').value||'').trim(), chatId=(qs('#tgChatId').value||'').trim(), proxy=(qs('#proxyUrl').value||'').trim(); if(!token||!chatId){ alert('กรุณาใส่ Bot Token และ Chat ID'); return; } const txt = '<b>ทดสอบจาก Break Timer V11 PRO</b>'; try{ let res; if(proxy){ res = await fetch(proxy,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,chatId,text:txt})}); } else { res = await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:txt,parse_mode:'HTML'})}); } if(res && res.ok){ tgResult.textContent='ส่งสำเร็จ ✨'; tgDebug.textContent=''; } else { tgResult.textContent='ส่งไม่สำเร็จ — ตรวจสอบค่าและ CORS'; tgDebug.textContent = res?('HTTP '+res.status):'no response'; } }catch(e){ tgResult.textContent = 'เกิดข้อผิดพลาด: '+e.message; tgDebug.textContent = e.stack||e.message; } });
+  on('#testTg','click', async ()=>{ const token=(qs('#tgToken')?.value||'').trim(), chatId=(qs('#tgChatId')?.value||'').trim(), proxy=(qs('#proxyUrl')?.value||'').trim(); if(!token||!chatId){ alert('กรุณาใส่ Bot Token และ Chat ID'); return; } const txt = '<b>ทดสอบจาก Break Timer V11 PRO</b>'; try{ let res; if(proxy){ res = await fetch(proxy,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,chatId,text:txt})}); } else { res = await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:txt,parse_mode:'HTML'})}); } if(res && res.ok){ tgResult.textContent='ส่งสำเร็จ ✨'; tgDebug.textContent=''; } else { tgResult.textContent='ส่งไม่สำเร็จ — ตรวจสอบค่าและ CORS'; tgDebug.textContent = res?('HTTP '+res.status):'no response'; } }catch(e){ tgResult.textContent = 'เกิดข้อผิดพลาด: '+e.message; tgDebug.textContent = e.stack||e.message; } });
 
   // dark toggle and init
-  qs('#darkToggle').addEventListener('click', ()=>{ document.body.classList.toggle('dark'); try{ localStorage.setItem('bt_v11_dark', document.body.classList.contains('dark')?'1':'0'); }catch(e){} });
+  on('#darkToggle','click', ()=>{ document.body.classList.toggle('dark'); try{ localStorage.setItem('bt_v11_dark', document.body.classList.contains('dark')?'1':'0'); }catch(e){} });
   if(localStorage.getItem('bt_v11_dark')==='1') document.body.classList.add('dark');
   dailyTargetInput.addEventListener('change', ()=>{ try{ const s={}; s.dailyTarget = Number(dailyTargetInput.value||60); saveSettings(s); updateStats(); }catch(e){} });
 
-  // restore running session
+  
+/* ===== Timer background upload support (NOAH345) ===== */
+(function(){
+  const BG_KEY = 'bt_v11_timer_bg';
+  const BG_OPACITY_KEY = 'bt_v11_timer_bg_opacity';
+  const BG_BLUR_KEY = 'bt_v11_timer_bg_blur';
+  const qs = s => document.querySelector(s);
+  const fileInput = qs('#bgFileInput');
+  const opacityEl = qs('#bgOpacity');
+  const blurEl = qs('#bgBlur');
+  const saveBtn = qs('#bgSaveBtn');
+  const resetBtn = qs('#bgResetBtn');
+  const timerDisplay = document.querySelector('.timer-display');
+
+  if(!timerDisplay) return;
+
+  // ensure layer exists
+  let bgLayer = timerDisplay.querySelector('.timer-bg-layer');
+  if(!bgLayer){
+    bgLayer = document.createElement('div');
+    bgLayer.className = 'timer-bg-layer';
+    timerDisplay.insertBefore(bgLayer, timerDisplay.firstChild);
+    // overlay sits above bg layer but below content
+    if(!timerDisplay.querySelector('.timer-overlay')){
+      const ov = document.createElement('div'); ov.className = 'timer-overlay';
+      // place overlay after bgLayer
+      if (bgLayer.nextSibling) timerDisplay.insertBefore(ov, bgLayer.nextSibling);
+      else timerDisplay.appendChild(ov);
+    }
+  }
+
+  function setBGFromUrl(url){
+    if(!url){ bgLayer.style.backgroundImage = ''; return; }
+    bgLayer.style.backgroundImage = 'url(\"' + url + '\")';
+  }
+  function setOpacity(v){ bgLayer.style.opacity = v; }
+  function setBlur(px){ bgLayer.style.filter = 'blur(' + px + 'px)'; }
+
+  function fileToDataUrl(file, maxWidth=1400){
+    return new Promise((resolve,reject)=>{
+      const r = new FileReader();
+      r.onload = ()=> {
+        const img = new Image();
+        img.onload = ()=>{
+          const scale = Math.min(1, maxWidth / img.width);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', 0.82);
+          resolve(dataUrl);
+        };
+        img.onerror = ()=> reject(new Error('invalid image'));
+        img.src = r.result;
+      };
+      r.onerror = ()=> reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  function loadBgSettings(){
+    try{
+      const url = localStorage.getItem(BG_KEY);
+      const op = localStorage.getItem(BG_OPACITY_KEY);
+      const bl = localStorage.getItem(BG_BLUR_KEY);
+      if(url){ setBGFromUrl(url); }
+      if(op !== null && opacityEl){ opacityEl.value = op; setOpacity(op); }
+      if(bl !== null && blurEl){ blurEl.value = bl; setBlur(bl); }
+    }catch(e){ console.error('loadBgSettings', e); }
+  }
+
+  if(fileInput){
+    fileInput.addEventListener('change', async (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      try{
+        const dataUrl = await fileToDataUrl(f, 1400);
+        setBGFromUrl(dataUrl);
+        localStorage.setItem(BG_KEY, dataUrl);
+      }catch(e){
+        alert('ไม่สามารถอ่านรูปได้: ' + (e.message||e));
+        console.error(e);
+      }
+    });
+  }
+
+  if(opacityEl) opacityEl.addEventListener('input', (e)=>{ setOpacity(e.target.value); localStorage.setItem(BG_OPACITY_KEY, e.target.value); });
+  if(blurEl) blurEl.addEventListener('input', (e)=>{ setBlur(e.target.value); localStorage.setItem(BG_BLUR_KEY, e.target.value); });
+
+  if(saveBtn) saveBtn.addEventListener('click', ()=>{ alert('บันทึกพื้นหลังเรียบร้อยค่ะ 💜'); });
+  if(resetBtn) resetBtn.addEventListener('click', ()=>{ localStorage.removeItem(BG_KEY); localStorage.removeItem(BG_OPACITY_KEY); localStorage.removeItem(BG_BLUR_KEY); setBGFromUrl(''); if(opacityEl) { opacityEl.value = 0.35; setOpacity(0.35); } if(blurEl){ blurEl.value = 0; setBlur(0); } alert('คืนค่าเริ่มต้นแล้วค่ะ 🌷'); });
+
+  // init
+  loadBgSettings();
+
+  // Wire the visible label to trigger file input when clicking the label/button
+  const labelBtn = document.querySelector('.timer-bg-controls .btn');
+  if(labelBtn && fileInput){
+    labelBtn.addEventListener('click', ()=> fileInput.click());
+  }
+})();
+
+
+// restore running session
   function init(){ renderLogs(); updateStats(); const logs = loadLogs(); for(let i=logs.length-1;i>=0;i--){ if(!logs[i].end){ startTime = logs[i].start; running=true; currentLogIndex=i; interval=setInterval(updateDisplay,1000); break; } } updateDisplay(); }
   init();
-
-  function nowISO(){ return new Date().toISOString(); }
-
 })();
 
 // ---- Added Daily Remaining + Telegram Notify ----
 
 // notify when daily remaining <= 110
 async function notifyDailyRemaining(remain, target){
-  const token = (qs('#tgToken').value||'').trim();
-  const chatId = (qs('#tgChatId').value||'').trim();
+  const token = (qs('#tgToken')?.value||'').trim();
+  const chatId = (qs('#tgChatId')?.value||'').trim();
   if(!token||!chatId) return;
   const msg = `<b>แจ้งเตือนเวลาคงเหลือรายวัน</b>
 เวลาคงเหลือ: ${remain} นาที
@@ -246,8 +370,8 @@ async function notifyDailyRemaining(remain, target){
 
 // send summary on end button
 async function sendDailySummary(){
-  const token=(qs('#tgToken').value||'').trim();
-  const chatId=(qs('#tgChatId').value||'').trim();
+  const token=(qs('#tgToken')?.value||'').trim();
+  const chatId=(qs('#tgChatId')?.value||'').trim();
   if(!token||!chatId) return;
   const dailyTarget=Number(dailyTargetInput.value||120);
   const logs=loadLogs();
@@ -298,6 +422,9 @@ async function sendDailySummary(){
     const type = el.type || '';
     if(tag === 'input' && (type === 'checkbox' || type === 'radio')){
       return {checked: el.checked};
+    } else if(tag === 'input' && type === 'file'){
+      // file inputs cannot be serialized/restored safely — skip
+      return null;
     } else if(tag === 'select'){
       return {value: el.value};
     } else {
@@ -312,14 +439,19 @@ async function sendDailySummary(){
     if('checked' in state && (tag === 'input' && (type === 'checkbox' || type === 'radio'))){
       el.checked = !!state.checked;
     }
+    // IMPORTANT: do not programmatically set value for file inputs (security restriction).
     if('value' in state){
-      // preserve cursor? simply set value
-      el.value = state.value;
-      // trigger input event if some code listens to changes
-      try{
-        el.dispatchEvent(new Event('input', {bubbles:true}));
-        el.dispatchEvent(new Event('change', {bubbles:true}));
-      }catch(e){}
+      if(tag === 'input' && type === 'file'){
+        // skip restoring file input value (cannot be set programmatically)
+      } else {
+        // preserve cursor? simply set value
+        el.value = state.value;
+        // trigger input event if some code listens to changes
+        try{
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+          el.dispatchEvent(new Event('change', {bubbles:true}));
+        }catch(e){}
+      }
     }
   }
 
@@ -472,11 +604,11 @@ async function sendDailySummary(){
     const arr = loadLogs();
     const d = arr[i];
     if(!d) return alert('ไม่พบบันทึก');
-    qs('#editIndex').value = i;
-    qs('#editType').value = d.type || '';
-    qs('#editStart').value = d.start ? toInputDT(d.start) : '';
-    qs('#editEnd').value = d.end ? toInputDT(d.end) : '';
-    qs('#editNote').value = d.note || '';
+    (function(){ const el = qs('#editIndex'); if(el) el.value = i; })();
+    (function(){ const el = qs('#editType'); if(el) el.value = d.type || ''; })();
+    (function(){ const el = qs('#editStart'); if(el) el.value = d.start ? toInputDT(d.start) : ''; })();
+    (function(){ const el = qs('#editEnd'); if(el) el.value = d.end ? toInputDT(d.end) : ''; })();
+    (function(){ const el = qs('#editNote'); if(el) el.value = d.note || ''; })();
     qs('#editModal').style.display = 'flex';
   }
 
@@ -495,13 +627,13 @@ async function sendDailySummary(){
     if(form){
       form.addEventListener('submit', function(e){
         e.preventDefault();
-        const i = Number(qs('#editIndex').value);
+        const i = Number(qs('#editIndex')?.value);
         const arr = loadLogs();
         if(i<0 || i>=arr.length) return alert('Index ผิดพลาด');
-        arr[i].type = qs('#editType').value;
-        arr[i].start = qs('#editStart').value ? new Date(qs('#editStart').value).toISOString() : arr[i].start;
-        arr[i].end = qs('#editEnd').value ? new Date(qs('#editEnd').value).toISOString() : arr[i].end;
-        arr[i].note = qs('#editNote').value;
+        arr[i].type = qs('#editType')?.value;
+        arr[i].start = qs('#editStart')?.value ? new Date(qs('#editStart')?.value).toISOString() : arr[i].start;
+        arr[i].end = qs('#editEnd')?.value ? new Date(qs('#editEnd')?.value).toISOString() : arr[i].end;
+        arr[i].note = qs('#editNote')?.value;
         saveLogs(arr);
         qs('#editModal').style.display = 'none';
         if(typeof window.renderLogs === 'function'){ try{ window.renderLogs(); }catch(e){ renderEnhancedLogs(); } } else renderEnhancedLogs();
@@ -514,7 +646,7 @@ async function sendDailySummary(){
 
     // re-run enhance when filters applied
     const applyBtn = qs('#applyFilter');
-    if(applyBtn) applyBtn.addEventListener('click', ()=>{ renderEnhancedLogs(qs('#filterStart').value, qs('#filterEnd').value); });
+    if(applyBtn) applyBtn.addEventListener('click', ()=>{ renderEnhancedLogs(qs('#filterStart')?.value, qs('#filterEnd')?.value); });
   });
 
 })();
@@ -921,4 +1053,150 @@ async function sendDailySummary(){
     const obs = new MutationObserver(()=>{ injectIcons(); wireSaveAnimation(); });
     obs.observe(document.body, { childList:true, subtree:true });
   });
+})();
+
+
+// --- Sticky Telegram settings (explicit save/restore) ---
+// Patch added by ChatGPT (Admin NOAH345) to ensure Bot Token / Chat ID / Proxy are saved & restored reliably
+(function(){
+  try{
+    const SETTINGS_KEY = 'bt_v11_settings'; // same as SSET_KEY in original project
+    const ids = ['tgToken','tgChatId','proxyUrl','sendStartNotif','sendNearNotif','sendEndNotif'];
+    function readAll(){
+      if(typeof loadSettings === 'function') return loadSettings() || {};
+      try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }catch(e){ return {}; }
+    }
+    function writeAll(obj){
+      if(typeof saveSettings === 'function'){
+        const cur = loadSettings() || {};
+        Object.assign(cur, obj);
+        saveSettings(cur);
+        return;
+      }
+      try{
+        const cur = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        Object.assign(cur, obj);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(cur));
+      }catch(e){}
+    }
+
+    function restoreFields(){
+      const s = readAll();
+      if(s.tgToken && document.querySelector('#tgToken')) document.querySelector('#tgToken').value = s.tgToken;
+      if(s.tgChatId && document.querySelector('#tgChatId')) document.querySelector('#tgChatId').value = s.tgChatId;
+      if(s.proxyUrl && document.querySelector('#proxyUrl')) document.querySelector('#proxyUrl').value = s.proxyUrl;
+      if(typeof s.sendStartNotif !== 'undefined' && document.querySelector('#sendStartNotif')) document.querySelector('#sendStartNotif').checked = !!s.sendStartNotif;
+      if(typeof s.sendNearNotif !== 'undefined' && document.querySelector('#sendNearNotif')) document.querySelector('#sendNearNotif').checked = !!s.sendNearNotif;
+      if(typeof s.sendEndNotif !== 'undefined' && document.querySelector('#sendEndNotif')) document.querySelector('#sendEndNotif').checked = !!s.sendEndNotif;
+    }
+
+    function wireSave(){
+      const textIds = ['tgToken','tgChatId','proxyUrl'];
+      textIds.forEach(id=>{
+        const el = document.querySelector('#'+id);
+        if(!el) return;
+        let t = null;
+        const save = ()=>{ const obj={}; obj[id] = el.value; writeAll(obj); };
+        el.addEventListener('input', ()=>{
+          if(t) clearTimeout(t);
+          t = setTimeout(()=>{ save(); t=null; }, 500);
+        });
+        el.addEventListener('change', save);
+        el.addEventListener('blur', save);
+      });
+
+      const chkIds = ['sendStartNotif','sendNearNotif','sendEndNotif'];
+      chkIds.forEach(id=>{
+        const el = document.querySelector('#'+id);
+        if(!el) return;
+        el.addEventListener('change', ()=>{
+          const obj = {}; obj[id] = el.checked; writeAll(obj);
+        });
+      });
+    }
+
+    window.__bt_v11_settings = {
+      read: ()=> { return readAll(); },
+      clear: ()=> { try{ localStorage.removeItem(SETTINGS_KEY); console.info('bt_v11_settings cleared'); }catch(e){} }
+    };
+
+    setTimeout(()=>{
+      restoreFields();
+      wireSave();
+    }, 250);
+
+  }catch(e){ console.error('sticky tg settings patch failed', e); }
+})();
+
+
+// --- Explicit Save button + Mask Token toggle ---
+(function(){
+  try{
+    const SETTINGS_KEY = 'bt_v11_settings';
+    function readSettings(){ if(typeof loadSettings==='function') return loadSettings(); try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); }catch(e){return{}} }
+    function writeSettings(obj){ if(typeof saveSettings==='function'){ const cur=loadSettings()||{}; Object.assign(cur,obj); saveSettings(cur); return; } try{ const cur=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); Object.assign(cur,obj); localStorage.setItem(SETTINGS_KEY, JSON.stringify(cur)); }catch(e){} }
+
+    function saveAllFromUI(){
+      const tokenEl = document.querySelector('#tgToken');
+      const chatEl = document.querySelector('#tgChatId');
+      const proxyEl = document.querySelector('#proxyUrl');
+      const obj = {};
+      if(tokenEl) obj.tgToken = tokenEl.value;
+      if(chatEl) obj.tgChatId = chatEl.value;
+      if(proxyEl) obj.proxyUrl = proxyEl.value;
+      const start = document.querySelector('#sendStartNotif');
+      const near = document.querySelector('#sendNearNotif');
+      const end = document.querySelector('#sendEndNotif');
+      if(start) obj.sendStartNotif = !!start.checked;
+      if(near) obj.sendNearNotif = !!near.checked;
+      if(end) obj.sendEndNotif = !!end.checked;
+      writeSettings(obj);
+      // visual feedback
+      const btn = document.querySelector('#tgSaveBtn');
+      if(btn){ btn.textContent = 'บันทึกแล้ว ✓'; setTimeout(()=>{ btn.textContent='บันทึกค่า'; }, 1500); }
+    }
+
+    // wire save button
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const btn = document.querySelector('#tgSaveBtn');
+      if(btn) btn.addEventListener('click', saveAllFromUI);
+
+      // mask toggle - when checked, replace value with bullets but keep real value in memory
+      const maskCheckbox = document.querySelector('#tgTokenMask');
+      const tokenEl = document.querySelector('#tgToken');
+      if(maskCheckbox && tokenEl){
+        // store real token in dataset
+        if(tokenEl.value) tokenEl.dataset.real = tokenEl.value;
+        function applyMask(){
+          if(maskCheckbox.checked){
+            tokenEl.dataset.real = tokenEl.value;
+            tokenEl.type = 'password';
+          }else{
+            // restore
+            tokenEl.type = 'text';
+            if(tokenEl.dataset.real) tokenEl.value = tokenEl.dataset.real;
+          }
+        }
+        maskCheckbox.addEventListener('change', applyMask);
+        // on input update dataset.real
+        tokenEl.addEventListener('input', ()=>{ tokenEl.dataset.real = tokenEl.value; });
+      }
+    });
+  }catch(e){ console.error('explicit save handler failed', e); }
+})();
+
+
+// Auto-persist: ensure file inputs are skipped when wiring persistence
+(function(){
+  try{
+    const _oldWireElement = window.wireElementState || null;
+    window.wireElementState = function(el){
+      try{
+        if(!el) return;
+        if(el.tagName && el.tagName.toLowerCase()==='input' && el.type && el.type.toLowerCase()==='file') return;
+        if(el.dataset && el.dataset.noPersist && (el.dataset.noPersist === 'true' || el.dataset.noPersist === '1')) return;
+      }catch(e){}
+      if(typeof _oldWireElement === 'function') return _oldWireElement(el);
+    };
+  }catch(e){}
 })();
