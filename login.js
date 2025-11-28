@@ -162,3 +162,90 @@
     loadProfiles, saveProfiles, generateProfileRecoveryCode, useProfileRecovery
   };
 })();
+
+
+
+/* ===== background particles (lightweight) for login page ===== */
+(function(){
+  try{
+    const c = document.createElement('canvas');
+    c.id = 'bgCanvas';
+    Object.assign(c.style,{position:'absolute',inset:'0',zIndex:0,pointerEvents:'none'});
+    document.body.prepend(c);
+    const ctx = c.getContext('2d');
+    function resize(){ c.width = innerWidth; c.height = innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    const count = Math.max(18, Math.floor(window.innerWidth/80)); // adapt to width
+    const particles = Array.from({length:count}).map(()=>({
+      x: Math.random()*c.width,
+      y: Math.random()*c.height,
+      r: Math.random()*1.8+0.6,
+      vx: (Math.random()-0.5)*0.25,
+      vy: (Math.random()-0.5)*0.25,
+      hue: 250 + Math.random()*40,
+      alpha: 0.08 + Math.random()*0.12
+    }));
+    function frame(){
+      ctx.clearRect(0,0,c.width,c.height);
+      particles.forEach(p=>{
+        p.x += p.vx; p.y += p.vy;
+        if(p.x < -10) p.x = c.width + 10;
+        if(p.x > c.width + 10) p.x = -10;
+        if(p.y < -10) p.y = c.height + 10;
+        if(p.y > c.height + 10) p.y = -10;
+        ctx.beginPath();
+        ctx.fillStyle = `hsla(${p.hue},80%,65%,${p.alpha})`;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }catch(e){
+    console.warn('particle init failed', e);
+  }
+})();
+
+
+
+/* ===== background particles (deep purple) for login page ===== */
+(function(){
+  try{
+    const c = document.getElementById('bgCanvas') || document.createElement('canvas');
+    c.id = 'bgCanvas';
+    Object.assign(c.style,{position:'absolute',inset:'0',zIndex:0,pointerEvents:'none'});
+    if(!document.getElementById('bgCanvas')) document.body.prepend(c);
+    const ctx = c.getContext('2d');
+    function resize(){ c.width = innerWidth; c.height = innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    const count = Math.max(18, Math.floor(window.innerWidth/70));
+    const particles = Array.from({length:count}).map(()=>({
+      x: Math.random()*c.width,
+      y: Math.random()*c.height,
+      r: Math.random()*2.6+0.8,
+      vx: (Math.random()-0.5)*0.28,
+      vy: (Math.random()-0.5)*0.28,
+      hue: 250 + Math.random()*30,
+      alpha: 0.06 + Math.random()*0.18
+    }));
+    function frame(){
+      ctx.clearRect(0,0,c.width,c.height);
+      particles.forEach(p=>{
+        p.x += p.vx; p.y += p.vy;
+        if(p.x < -10) p.x = c.width + 10;
+        if(p.x > c.width + 10) p.x = -10;
+        if(p.y < -10) p.y = c.height + 10;
+        if(p.y > c.height + 10) p.y = -10;
+        ctx.beginPath();
+        // deeper purple tones
+        ctx.fillStyle = `hsla(${p.hue},70%,50%,${p.alpha})`;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }catch(e){
+    console.warn('particle init failed', e);
+  }
+})();
