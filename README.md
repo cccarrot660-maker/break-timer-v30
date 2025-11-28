@@ -34,3 +34,11 @@ Files included:
 
 ## Need help?
 Tell me which hosting method you prefer (GitHub Pages / Vercel / VPS) and I will give step-by-step instructions and a ready-to-deploy package for that platform.
+
+
+---
+
+## v8 release (packed)
+Prepared bundle for NOAH345 — includes UI fixes, modal glass effect, icons, animations, and resilient Telegram proxy support.
+
+Built: 2025-11-28T03:22:13.921098
