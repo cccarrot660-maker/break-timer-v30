@@ -60,7 +60,31 @@
         </div>
       </div>
 
-      <div class="actions">
+      
+    <!-- START: Timer background controls (NOAH345) -->
+    <div class="timer-bg-controls" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <label class="btn ghost" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+        เลือกรูปพื้นหลัง
+        <input id="bgFileInput" type="file" accept="image/*" style="display:none">
+      </label>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="small">โปร่ง</div>
+        <input id="bgOpacity" type="range" min="0" max="1" step="0.01" value="0.35">
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="small">เบลอ</div>
+        <input id="bgBlur" type="range" min="0" max="12" step="1" value="0">
+      </div>
+
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button id="bgSaveBtn" class="btn primary">บันทึกพื้นหลัง</button>
+        <button id="bgResetBtn" class="btn ghost">คืนค่า</button>
+      </div>
+    </div>
+    <!-- END: Timer background controls -->
+<div class="actions">
         <button id="startBtn" class="btn primary large">เริ่ม</button>
         <button id="pauseBtn" class="btn alt large">พัก/Resume</button>
         <button id="endBtn" class="btn warn large">จบ</button>
