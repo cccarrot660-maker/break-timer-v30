@@ -1200,3 +1200,135 @@ async function sendDailySummary(){
     };
   }catch(e){}
 })();
+
+/* NOAH345_RUNTIME_PATCH v1 */
+
+/* NOAH345_RUNTIME_PATCH v1 */
+/* Lightweight runtime patch added to improve resilience:
+   - Ensure timer background layer exists
+   - Persist Telegram / Proxy settings to localStorage
+   - Add Edit/Delete action buttons to logs table (if missing)
+   - Idempotent: will not duplicate if already present
+*/
+(function(){
+  try{
+    // helper
+    const qs = s => document.querySelector(s);
+    const qsa = s => Array.from(document.querySelectorAll(s));
+    function safe(fn){ try{ fn(); }catch(e){ console.warn('patch err',e); } }
+
+    // ensure bg layer
+    safe(()=>{
+      const timerDisplay = document.querySelector('.timer-display') || document.querySelector('.timer-card') || document.querySelector('.timerCard');
+      if(timerDisplay){
+        let bgLayer = timerDisplay.querySelector('.timer-bg-layer');
+        if(!bgLayer){
+          bgLayer = document.createElement('div'); bgLayer.className='timer-bg-layer';
+          timerDisplay.insertBefore(bgLayer, timerDisplay.firstChild);
+        }
+        let overlay = timerDisplay.querySelector('.timer-overlay');
+        if(!overlay){
+          overlay = document.createElement('div'); overlay.className='timer-overlay';
+          if(bgLayer.nextSibling) timerDisplay.insertBefore(overlay, bgLayer.nextSibling);
+          else timerDisplay.appendChild(overlay);
+        }
+      }
+    });
+
+    // persist tg/proxy settings
+    safe(()=>{
+      const SETTINGS_KEY = 'bt_v11_settings';
+      function load(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }catch(e){return{};} }
+      function save(s){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s||{})); }catch(e){} }
+      const inputs = [
+        {sel:'#tgToken', key:'tgToken'},
+        {sel:'#tgChatId', key:'tgChatId'},
+        {sel:'#proxyUrl', key:'proxyUrl'},
+        {sel:'#dailyTargetInput', key:'dailyTarget'}
+      ];
+      const data = load();
+      inputs.forEach(it=>{
+        const el = document.querySelector(it.sel);
+        if(!el) return;
+        // restore
+        if(data[it.key] !== undefined){
+          try{ if(el.type==='number') el.value = data[it.key]; else el.value = data[it.key]; }catch(e){}
+        }
+        // save on change
+        el.addEventListener('change', ()=>{ const s = load(); if(el.type==='number') s[it.key]=Number(el.value||0); else s[it.key]=el.value; save(s); });
+        el.addEventListener('input', ()=>{ const s = load(); if(el.type==='number') s[it.key]=Number(el.value||0); else s[it.key]=el.value; save(s); });
+      });
+    });
+
+    // add action buttons to logs table rows (post-render)
+    safe(()=>{
+      function ensureActions(){
+        const tbody = document.querySelector('#logsTable tbody');
+        if(!tbody) return;
+        Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx)=>{
+          if(tr.querySelector('.actionCell')) return; // already has actions
+          const actionTd = document.createElement('td'); actionTd.className='actionCell';
+          const edit = document.createElement('button'); edit.className='actionBtn edit'; edit.textContent='แก้ไข';
+          const del = document.createElement('button'); del.className='actionBtn del'; del.textContent='ลบ';
+          actionTd.appendChild(edit); actionTd.appendChild(del);
+          tr.appendChild(actionTd);
+
+          edit.addEventListener('click', async ()=>{
+            try{
+              const typeCell = tr.children[0];
+              const startCell = tr.children[1];
+              const endCell = tr.children[2];
+              const minsCell = tr.children[3];
+              const newType = prompt('แก้ไขประเภท', typeCell.textContent || '');
+              if(newType===null) return;
+              // find corresponding log from storage by matching start ISO (best-effort)
+              const logs = JSON.parse(localStorage.getItem('bt_v11_logs')||'[]');
+              // match by start text (locale) fallback to index
+              const startText = (startCell.textContent||'').trim();
+              let foundIdx = logs.findIndex(l=> (new Date(l.start).toLocaleString()+'')===startText );
+              if(foundIdx===-1) foundIdx = logs.length - 1 - Array.from(tr.parentNode.children).indexOf(tr); // best-effort fallback
+              if(foundIdx<0 || foundIdx>=logs.length) foundIdx = logs.length - 1 - idx;
+              if(foundIdx<0 || foundIdx>=logs.length) { alert('ไม่พบบันทึกที่ตรงกัน'); return; }
+              logs[foundIdx].type = newType;
+              localStorage.setItem('bt_v11_logs', JSON.stringify(logs));
+              // update UI
+              typeCell.textContent = newType;
+              alert('แก้ไขเรียบร้อย');
+            }catch(e){ console.error(e); alert('เกิดข้อผิดพลาดขณะแก้ไข'); }
+          });
+
+          del.addEventListener('click', ()=>{
+            if(!confirm('ลบรายการนี้?')) return;
+            try{
+              const tbody = document.querySelector('#logsTable tbody');
+              const rows = Array.from(tbody.querySelectorAll('tr'));
+              const ridx = rows.indexOf(tr);
+              const logs = JSON.parse(localStorage.getItem('bt_v11_logs')||'[]');
+              const actualIdx = logs.length - 1 - ridx;
+              if(actualIdx>=0 && actualIdx<logs.length){
+                logs.splice(actualIdx,1);
+                localStorage.setItem('bt_v11_logs', JSON.stringify(logs));
+                tr.remove();
+                // trigger external stats update if present
+                if(typeof updateStats==='function') try{ updateStats(); }catch(e){}
+              } else {
+                // fallback: just remove UI row
+                tr.remove();
+              }
+            }catch(e){ console.error(e); alert('ลบไม่สำเร็จ'); }
+          });
+        });
+      }
+
+      // run once and also observe mutations to tbody
+      ensureActions();
+      const tbody = document.querySelector('#logsTable tbody');
+      if(tbody){
+        const obs = new MutationObserver(()=>{ ensureActions(); });
+        obs.observe(tbody, {childList:true, subtree:true});
+      }
+    });
+
+    console.log('NOAH345_RUNTIME_PATCH applied');
+  }catch(e){ console.warn('NOAH345 patch fail', e); }
+})();
