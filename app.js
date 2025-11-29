@@ -124,11 +124,13 @@ function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'
       const token = (qs('#tgToken')?.value||'').trim(); const chatId = (qs('#tgChatId')?.value||'').trim();
       if(!token||!chatId){ tgResult.textContent='ยังไม่ได้ตั้งค่า Bot Token/Chat ID'; return; }
       const usedMin = Math.round(totalSec/60);
-      const msg = `<b>เตือนใกล้ครบ</b>
-ประเภท: ${entry.type}
-เริ่ม: ${fmtLocal(entry.start)}
-ใช้เวลา: ${usedMin} นาที
-เวลาเหลือประมาณ: ${remainMin} นาที`;
+      const msg = `⏳ <b>ใกล้ครบเวลาแล้วค่ะ</b>
+
+📌 ประเภท: พัก
+⏱️ เริ่ม: ${fmtLocal(entry.start)}
+
+🕒 ใช้เวลาแล้ว: ${usedMin} นาที
+⌛ เวลาเหลือประมาณ: ${remainMin} นาที`;
       tgResult.textContent='กำลังส่งแจ้งเตือนใกล้หมด...';
       const res = await sendTelegram(token, chatId, msg);
       if(res.ok){ tgResult.textContent='ส่ง near-end สำเร็จ ✨'; tgDebug.textContent=''; nearWarnSentIndex = currentLogIndex; }
@@ -151,11 +153,14 @@ function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'
         const token=(qs('#tgToken')?.value||'').trim(), chatId=(qs('#tgChatId')?.value||'').trim();
         if(!token||!chatId){ tgResult.textContent='ยังไม่ได้ตั้งค่า Bot Token/Chat ID'; return; }
         const roundLimit = Number(limitMinutesEl.value||30);
-        const msg = `<b>เริ่ม${modeSelect.value}</b>
-ประเภท: ${modeSelect.value}
-เริ่ม: ${fmtLocal(startTime)}
-ใช้เวลา: 0 นาที
-เวลามีเหลือ: ${roundLimit} นาที`;
+        const dailyRemain = (function(){ try{ const logs = loadLogs(); let sumToday=0; const today = new Date(); today.setHours(0,0,0,0); for(const l of logs){ const mins = Math.round(secs(l.start,l.end)/60); if(mins>0){ const st=new Date(l.start); if(st>=today) sumToday += mins; } } const target = Number(dailyTargetInput?.value||60); return Math.max(0, target - sumToday); }catch(e){return '-';} })();
+const msg = `🚀 <b>เริ่มพัก</b>
+
+📌 ประเภท: พัก
+⏱️ เริ่ม: ${fmtLocal(startTime)}
+
+🕒 เวลาคงเหลือต่อรอบ: ${roundLimit} นาที
+🌞 วันนี้เวลาคงเหลือ: ${dailyRemain} นาที`;
         tgResult.textContent='ส่งแจ้งเตือนเริ่ม...'; const r = await sendTelegram(token, chatId, msg);
         if(r.ok){ tgResult.textContent='ส่งเริ่มสำเร็จ ✨'; tgDebug.textContent=''; } else { tgResult.textContent='ส่งเริ่มไม่สำเร็จ'; tgDebug.textContent=JSON.stringify(r); }
       }
@@ -179,13 +184,19 @@ function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'
         const limit = Number(limitMinutesEl.value||30); const remain = Math.max(0, limit - usedMin);
         const durH = Math.floor(usedSec/3600), durM = Math.floor((usedSec%3600)/60), durS = usedSec%60;
         const dur = (durH>0?durH+' ช.ม ':'') + durM + ' นาที ' + durS + ' วินาที';
-        const msg = `<b>จบ${finished.type}</b>
-ประเภท: ${finished.type}
-เริ่ม: ${fmtLocal(finished.start)}
-จบ: ${fmtLocal(finished.end)}
-ใช้เวลา: ${usedMin} นาที
-เวลาเหลือจากลิมิตรอบ: ${remain} นาที
-(สรุป: ${dur})`;
+const dailyRemain = (function(){ try{ const logs = loadLogs(); let sumToday=0; const today = new Date(); today.setHours(0,0,0,0); for(const l of logs){ const mins = Math.round(secs(l.start,l.end)/60); if(mins>0){ const st=new Date(l.start); if(st>=today) sumToday += mins; } } const target = Number(dailyTargetInput?.value||60); return Math.max(0, target - sumToday); }catch(e){return '-';} })();
+const msg = `✅ <b>จบการพัก</b>
+
+📌 ประเภท: พัก
+⏱️ เริ่ม: ${fmtLocal(finished.start)}
+🏁 จบ: ${fmtLocal(finished.end)}
+
+⏳ ใช้เวลา: ${dur}
+
+🕒 เวลาคงเหลือต่อรอบ: ${remain} นาที
+🌞 วันนี้เวลาคงเหลือ: ${dailyRemain} นาที
+
+📌 (สรุป: ${dur}) ✨💜`;
         tgResult.textContent='ส่งแจ้งเตือนจบ...'; const r = await sendTelegram(token, chatId, msg);
         if(r.ok){ tgResult.textContent='ส่งจบสำเร็จ ✨'; tgDebug.textContent=''; nearWarnSentIndex=null; currentLogIndex=null; } else { tgResult.textContent='ส่งจบไม่สำเร็จ'; tgDebug.textContent=JSON.stringify(r); }
       }
@@ -1199,164 +1210,4 @@ async function sendDailySummary(){
       if(typeof _oldWireElement === 'function') return _oldWireElement(el);
     };
   }catch(e){}
-})();
-
-
-
-
-/* ===== THEME PRESET SYSTEM (NOAH345) - ENHANCED ===== */
-(function(){
-  const THEME_KEY = 'bt_v11_theme';
-  const available = ['purple','cyan','pink','pastel','violetpulse','aquawave','pinksonic','cyberlime','pastelsky','softpeach','mintcream','cottoncandy','deepnavy','carbonblack','royalgold','nordfrost'];
-  function applyTheme(name){
-    const root = document.documentElement;
-    // make sure name is valid
-    if(!available.includes(name)) name = 'purple';
-    // perform a soft overlay for nicer transition
-    let overlay = document.querySelector('.theme-swap-overlay');
-    if(!overlay){
-      overlay = document.createElement('div');
-      overlay.className = 'theme-swap-overlay';
-      document.body.appendChild(overlay);
-    }
-    overlay.classList.add('show');
-    // small delay to allow fade-in
-    setTimeout(()=>{
-      root.classList.remove(...available.map(t=>'theme-'+t));
-      root.classList.add('theme-' + name);
-      // update active buttons
-      document.querySelectorAll('.theme-btn').forEach(b=>{
-        b.classList.toggle('active', b.dataset.theme === name);
-      });
-      // hide overlay
-      setTimeout(()=>{ overlay.classList.remove('show'); }, 260);
-    }, 80);
-  }
-
-  // load saved or default to purple
-  const saved = (localStorage.getItem(THEME_KEY) || 'purple');
-  try { applyTheme(saved); } catch(e){ console.warn('applyTheme failed', e); }
-
-  // bind theme buttons and save selected theme
-  function bindThemeButtons(){
-    const buttons = document.querySelectorAll('.theme-btn');
-    buttons.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const theme = btn.dataset.theme;
-        if(!theme) return;
-        applyTheme(theme);
-        localStorage.setItem(THEME_KEY, theme);
-      });
-    });
-    // mark active according to saved
-    buttons.forEach(b=> b.classList.toggle('active', b.dataset.theme === saved));
-  }
-
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    bindThemeButtons();
-  } else {
-    window.addEventListener('DOMContentLoaded', bindThemeButtons);
-  }
-})();
-
-
-
-
-/* ===== COMPACT THEME SELECTOR BIND (NOAH345) ===== */
-(function(){
-  function bindCompactList(){
-    const items = document.querySelectorAll('.compact-item.theme-btn');
-    if(!items || items.length===0) return;
-    const saved = localStorage.getItem('bt_v11_theme') || 'purple';
-    items.forEach(it=>{
-      it.classList.toggle('active', it.dataset.theme === saved);
-      it.addEventListener('click', ()=> {
-        const theme = it.dataset.theme;
-        // trigger existing theme apply logic by simulating click on .theme-btn elsewhere or call apply directly if available
-        const ev = new Event('click');
-        // find any .theme-btn (non-compact) with same data-theme to reuse binding; else call apply if function exists
-        const proxy = document.querySelector('.theme-btn[data-theme="' + theme + '"]:not(.compact-item)');
-        if(proxy){
-          proxy.dispatchEvent(ev);
-        } else {
-          try{ window.applyTheme && window.applyTheme(theme); }catch(e){}
-          localStorage.setItem('bt_v11_theme', theme);
-          // update active states
-          document.querySelectorAll('.compact-item').forEach(x=> x.classList.toggle('active', x.dataset.theme===theme));
-          document.querySelectorAll('.theme-btn').forEach(x=> x.classList.toggle('active', x.dataset.theme===theme));
-        }
-      });
-    });
-  }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') bindCompactList();
-  else window.addEventListener('DOMContentLoaded', bindCompactList);
-})();
-
-
-
-/* ===== ensure compact-circle buttons reflect active state (NOAH345) ===== */
-(function(){
-  function bindCircleButtons(){
-    const circles = document.querySelectorAll('.compact-circle.theme-btn');
-    if(!circles || circles.length===0) return;
-    const saved = localStorage.getItem('bt_v11_theme') || 'purple';
-    circles.forEach(c=>{
-      c.classList.toggle('active', c.dataset.theme === saved);
-      c.addEventListener('click', ()=>{
-        // trigger theme change via existing theme-btn binding
-        const theme = c.dataset.theme;
-        const proxy = document.querySelector('.theme-btn[data-theme="' + theme + '"]:not(.compact-circle)');
-        if(proxy){
-          proxy.click();
-        } else {
-          try{ window.applyTheme && window.applyTheme(theme); }catch(e){}
-          localStorage.setItem('bt_v11_theme', theme);
-          document.querySelectorAll('.compact-circle').forEach(x=> x.classList.toggle('active', x.dataset.theme===theme));
-          document.querySelectorAll('.theme-btn').forEach(x=> x.classList.toggle('active', x.dataset.theme===theme));
-        }
-      });
-    });
-  }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') bindCircleButtons();
-  else window.addEventListener('DOMContentLoaded', bindCircleButtons);
-})();
-
-
-
-/* ===== FW (fullwidth) theme binding (NOAH345) ===== */
-(function(){
-  function applyThemeLocal(name){
-    try{
-      if(window.applyTheme) { window.applyTheme(name); return true; }
-      // fallback: add class to root
-      const available = ['purple','cyan','pink','pastel','violetpulse','aquawave','pinksonic','cyberlime','pastelsky','softpeach','mintcream','cottoncandy','deepnavy','carbonblack','royalgold','nordfrost'];
-      const root = document.documentElement;
-      root.classList.remove(...available.map(t=>'theme-'+t));
-      root.classList.add('theme-' + name);
-      return true;
-    }catch(e){ console.warn('applyThemeLocal err', e); return false; }
-  }
-
-  function bindFW(){
-    const items = document.querySelectorAll('.fw-item.theme-btn');
-    if(!items || items.length===0) return;
-    const saved = localStorage.getItem('bt_v11_theme') || 'purple';
-    items.forEach(it=>{
-      it.classList.toggle('active', it.dataset.theme === saved);
-      it.addEventListener('click', ()=>{
-        const theme = it.dataset.theme;
-        applyThemeLocal(theme);
-        localStorage.setItem('bt_v11_theme', theme);
-        items.forEach(x=> x.classList.toggle('active', x===it));
-        // scroll active into center
-        try{ it.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); }catch(e){}
-      });
-    });
-    // ensure active is scrolled into view on load
-    const active = document.querySelector('.fw-item.active');
-    if(active){ try{ active.scrollIntoView({behavior:'auto', inline:'center', block:'nearest'}); }catch(e){} }
-  }
-
-  if (document.readyState === 'complete' || document.readyState === 'interactive') bindFW();
-  else window.addEventListener('DOMContentLoaded', bindFW);
 })();
