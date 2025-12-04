@@ -66,7 +66,62 @@ const nowISO = window.nowISO;
 function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'; }
   function secs(s,e){ if(!s) return 0; const st=new Date(s), ed=e?new Date(e):new Date(); return Math.max(0, Math.floor((ed-st)/1000)); }
 
-  // Telegram sender with optional proxy
+  
+
+/* === SHIFT SYSTEM (07:00–19:00 , 19:00–07:00) ===
+   เพิ่มโดย NOAH345 patch — ฟังก์ชันช่วยคำนวณนาทีตามกะ (รองรับกะดึกข้ามวัน)
+*/
+function getShift(datetime) {
+  if(!datetime) datetime = new Date();
+  const h = datetime.getHours();
+  if (h >= 7 && h < 19) {
+    return "กะเช้า";
+  } else {
+    return "กะดึก";
+  }
+}
+
+// คำนวณนาทีในกะสำหรับช่วงเวลาที่ให้ (รองรับ start/end ใน ISO string)
+function calcShiftMinutes(startISO, endISO) {
+  if (!startISO || !endISO) return 0;
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+  if (end.getTime() <= start.getTime()) return 0;
+
+  // helper to compute overlap between two ranges [a,b) and [c,d)
+  function overlapMinutes(a, b, c, d) {
+    const s = Math.max(a, c);
+    const e = Math.min(b, d);
+    return Math.max(0, Math.floor((e - s) / 60000));
+  }
+
+  let total = 0;
+
+  // We'll iterate day by day to correctly handle long spans and multiple shifts
+  const cur = new Date(start.getTime());
+  cur.setSeconds(0,0);
+  while (cur.getTime() < end.getTime()) {
+    // build shift boundaries for the day of 'cur'
+    const day = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
+    const shiftMorningStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 7,0,0,0);  // 07:00
+    const shiftMorningEnd   = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 19,0,0,0); // 19:00
+    const shiftNightStart   = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 19,0,0,0); // 19:00
+    const shiftNightEnd     = new Date(day.getFullYear(), day.getMonth(), day.getDate()+1, 7,0,0,0); // next day 07:00
+
+    // accumulate overlap with morning shift
+    total += overlapMinutes(start.getTime(), end.getTime(), shiftMorningStart.getTime(), shiftMorningEnd.getTime());
+    // accumulate overlap with night shift
+    total += overlapMinutes(start.getTime(), end.getTime(), shiftNightStart.getTime(), shiftNightEnd.getTime());
+
+    // advance cur to next day's 00:00 to avoid infinite loop
+    cur.setDate(cur.getDate() + 1);
+    cur.setHours(0,0,0,0);
+  }
+
+  return total;
+}
+// Telegram sender with optional proxy
   async function sendTelegram(token, chatId, text){
     const proxy = (qs('#proxyUrl') ? qs('#proxyUrl')?.value.trim() : '');
     try{
@@ -91,7 +146,8 @@ function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'
     if(startTime) total = Math.floor((Date.now() - new Date(startTime).getTime() - elapsedPaused)/1000);
     const h = String(Math.floor(total/3600)).padStart(2,'0'), m = String(Math.floor((total%3600)/60)).padStart(2,'0'), s = String(total%60).padStart(2,'0');
     timeLarge.textContent = `${h}:${m}:${s}`;
-    timerLabel.textContent = `สถานะ: ${running?modeSelect.value:'หยุดชั่วคราว'}`;
+    const __curShift = (typeof getShift==='function' ? getShift(new Date()) : '');
+    timerLabel.textContent = `สถานะ: ${running?modeSelect.value:'หยุดชั่วคราว'}${__curShift? ' • กะ: '+__curShift : ''}`;
     timeInfo.textContent = `เริ่ม: ${fmtLocal(startTime)} • ผ่านไป ${Math.round(total/60)} นาที`;
     // smart and near-end
     smartChecks(total);
@@ -128,6 +184,7 @@ function fmtLocal(iso){ return iso ? new Date(iso).toLocaleString('th-TH') : '-'
 
 📌 ประเภท: พัก
 ⏱️ เริ่ม: ${fmtLocal(entry.start)}
+🕦 กะ: ${typeof getShift==='function' ? getShift(new Date(entry.start)) : ''}
 
 🕒 ใช้เวลาแล้ว: ${usedMin} นาที
 ⌛ เวลาเหลือประมาณ: ${remainMin} นาที`;
@@ -189,6 +246,7 @@ const msg = `✅ <b>จบการพัก</b>
 
 📌 ประเภท: พัก
 ⏱️ เริ่ม: ${fmtLocal(finished.start)}
+🕦 กะ: ${typeof getShift==='function' ? getShift(new Date(finished.start)) : ''}
 🏁 จบ: ${fmtLocal(finished.end)}
 
 ⏳ ใช้เวลา: ${dur}
@@ -217,7 +275,7 @@ const msg = `✅ <b>จบการพัก</b>
   function renderLogs(filterStart, filterEnd){
     const logs = loadLogs().slice().reverse(); logsBody.innerHTML='';
     const fs = filterStart? new Date(filterStart+'T00:00:00') : null; const fe = filterEnd? new Date(filterEnd+'T23:59:59') : null;
-    logs.forEach(l=>{ const st = new Date(l.start); if(fs && st<fs) return; if(fe && st>fe) return; const tr = document.createElement('tr'); const mins = Math.round(secs(l.start,l.end)/60); tr.innerHTML = `<td>${l.type||''}</td><td>${fmtLocal(l.start)}</td><td>${l.end?fmtLocal(l.end):'-'}</td><td>${mins}</td>`; logsBody.appendChild(tr); });
+    logs.forEach(l=>{ const st = new Date(l.start); if(fs && st<fs) return; if(fe && st>fe) return; const tr = document.createElement('tr'); const mins = Math.round(secs(l.start,l.end)/60); tr.innerHTML = `<td>${l.type||''}</td><td>${fmtLocal(l.start)}</td><td>${l.end?fmtLocal(l.end):'-'}</td><td>${typeof getShift==='function' ? getShift(new Date(l.start)) : ''}</td><td>${mins}</td>`; logsBody.appendChild(tr); });
   }
 
   // stats + chart
@@ -705,7 +763,7 @@ async function sendDailySummary(){
     logs.slice().reverse().forEach(l=>{
       const tr = document.createElement('tr');
       const mins = Math.round(secs(l.start,l.end)/60);
-      tr.innerHTML = `<td>${l.type||''}</td><td>${l.start?new Date(l.start).toLocaleString('th-TH'):'-'}</td><td>${l.end?new Date(l.end).toLocaleString('th-TH'):'-'}</td><td>${mins}</td><td class="actionCell"></td>`;
+      tr.innerHTML = `<td>${l.type||''}</td><td>${l.start?new Date(l.start).toLocaleString('th-TH'):'-'}</td><td>${l.end?new Date(l.end).toLocaleString('th-TH'):'-'}</td><td>${typeof getShift==='function' ? getShift(new Date(l.start)) : ''}</td><td>${mins}</td><td class="actionCell"></td>`;
       tbody.appendChild(tr);
     });
   }
