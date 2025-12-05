@@ -46,7 +46,23 @@
           <option value="พัก">พัก</option>
           <option value="ทำงาน">ทำงาน</option>
         </select>
-        <div class="dailyTargetWrap">เวลารายวัน <input id="dailyTargetInput" type="number" min="0" value="60" /> นาที</div>
+        
+        <div class="dailyTargetWrap">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="margin-right:8px;">เป้าหมาย:</label>
+            <select id="targetMode" class="select" title="เลือกประเภทเป้าหมาย">
+              <option value="perShift">ต่อกะ (shift)</option>
+              <option value="perDay">ต่อวัน (day)</option>
+            </select>
+            <div id="shiftTargetWrap" style="display:inline-flex;align-items:center;gap:8px;">
+              <label style="margin-left:8px;">เป้าต่อกะ <input id="shiftTargetInput" aria-label="เป้าต่อกะ (ล็อก) type="number" min="0" value="120" disabled style="width:80px" /></label>
+            </div>
+            <div id="dayTargetWrap" style="display:none;align-items:center;gap:8px;">
+              <label style="margin-left:8px;">เป้าต่อวัน <input id="dailyTargetInput" type="number" min="0" value="60" style="width:80px" /></label>
+            </div>
+          </div>
+        </div>
+    
       </div>
 
       <div class="timerCard timer-display">
@@ -158,7 +174,7 @@
           <input type="date" id="filterEnd" />
           <button id="applyFilter" class="btn ghost">กรอง</button>
         </div>
-        <div class="logs"><table id="logsTable"><thead><tr><th>ประเภท</th><th>เริ่ม</th><th>จบ</th><th>นาที</th><th>การกระทำ</th></tr></thead><tbody></tbody></table></div>
+        <div class="logs"><table id="logsTable"><thead><tr><th>ประเภท</th><th>เริ่ม</th><th>จบ</th><th>กะ</th><th>นาที</th><th>การกระทำ</th></tr></thead><tbody></tbody></table></div>
         <div class="row">
           <button id="exportCsv" class="btn ghost">Export CSV</button>
           <button id="clearAll" class="btn danger">ลบทั้งหมด</button>
@@ -212,6 +228,22 @@
     </div>
   </div>
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const sel = document.getElementById('targetMode');
+  const shiftWrap = document.getElementById('shiftTargetWrap');
+  const dayWrap = document.getElementById('dayTargetWrap');
+  function updateVisibility(){
+    if(sel.value === 'perShift'){ shiftWrap.style.display='inline-flex'; dayWrap.style.display='none'; }
+    else { shiftWrap.style.display='none'; dayWrap.style.display='inline-flex'; }
+    try{ if(typeof updateStats === 'function') updateStats(); }catch(e){}
+  }
+  sel.addEventListener('change', updateVisibility);
+  updateVisibility();
+});
+</script>
 
 </body>
 </html>
